@@ -132,6 +132,11 @@ def detect_intent(message: str, user_id: Optional[str] = None) -> Dict[str, Any]
         r'\b(?:what\s+)?skills?\s+(?:are\s+)?missing\s+(?:from|in)',
         r'\b(?:what\s+skills?\s+are\s+missing)',
         r'\b(?:what|which)\s+(?:are|is)\s+missing\s+(?:in|from)\s+(?:the\s+)?(?:resume|cv)',
+        # NEW: Catch "what are the skills missing" (with "the" in between)
+        r'\b(?:what|which)\s+(?:are|is)\s+(?:the\s+)?skills?\s+(?:are\s+)?missing',
+        r'\b(?:what|which)\s+(?:are|is)\s+(?:the\s+)?(?:skills?|missing)',
+        r'\b(?:what|which)\s+skills?\s+(?:are|is)\s+missing',
+        r'\b(?:what)\s+(?:are|is)\s+(?:the\s+)?skills?\s+(?:missing|needed)',
     ]
     skill_gap_match = None
     is_skill_gap_question = False

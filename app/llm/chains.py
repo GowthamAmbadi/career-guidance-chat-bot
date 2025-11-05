@@ -80,7 +80,7 @@ def get_skill_gap_chain():
 
 def get_job_fit_chain():
     """Chain for job fit score analysis."""
-    llm = get_gemini_llm(temperature=0.3)
+    llm = get_gemini_llm(temperature=0.1)  # Lower temperature for stricter scoring
     prompt = create_job_fit_analyst_prompt()
     parser = JsonOutputParser()
     return prompt | llm | parser

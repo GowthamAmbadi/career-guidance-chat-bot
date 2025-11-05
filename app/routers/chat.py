@@ -439,14 +439,22 @@ CRITICAL FORMATTING RULES:
                     ("system", """You are a technical recruiter extracting skills from a job description. 
 Extract ALL technical skills, programming languages, frameworks, tools, and concepts mentioned. 
 Include:
-- Programming languages (e.g., Java, Python)
-- Frameworks and libraries (e.g., Spring Boot, REST APIs)
+- Programming languages (e.g., Java, Python, JavaScript)
+- Frameworks and libraries (e.g., Spring Boot, React.js, REST APIs)
 - Concepts and knowledge areas (e.g., OOP Concepts, Multithreading, Collections)
-- Database technologies (e.g., SQL, MongoDB)
-- Any specific technologies mentioned
+- Database technologies (e.g., SQL, MongoDB, MySQL)
+- Security tools and technologies (e.g., Symantec DLP, SIEM, log analysis, forensic analysis, incident response)
+- Domain-specific skills (e.g., cyber security, security monitoring, vulnerability assessment, penetration testing)
+- Any specific tools, technologies, or concepts mentioned
+
+CRITICAL: For Cyber Security roles, extract security-specific skills like:
+- Security tools: Symantec DLP, SIEM tools, security monitoring tools
+- Security processes: log analysis, forensic analysis, incident response, vulnerability assessment
+- Security knowledge: cyber security, information security, security operations, risk analysis
 
 Return ONLY a JSON array of skills as strings. Be comprehensive and include all mentioned skills.
-Example: ["Core Java", "OOP Concepts", "Collections", "Multithreading", "Exception Handling", "Java 8 Features", "SQL", "Spring Boot", "Microservices", "REST APIs"]"""),
+Example for Cyber Security: ["Symantec DLP", "log analysis", "forensic analysis", "incident response", "cyber security", "security monitoring", "vulnerability assessment", "risk analysis", "security operations"]
+Example for Web Dev: ["Core Java", "OOP Concepts", "Collections", "Multithreading", "SQL", "Spring Boot", "Microservices", "REST APIs", "React.js", "HTML5", "CSS3"]"""),
                     ("human", "Job Description:\n{job_description}\n\nExtract all skills and return as JSON array:")
                 ])
                 skill_extract_chain = skill_extract_prompt | llm
@@ -696,6 +704,27 @@ Focus on developing: {recommendation_str}"""
             else:
                 fit_score = 0
                 rationale = "Analysis completed."
+            
+            # Check for domain mismatch in rationale or job description
+            # If it's a domain mismatch (ML → Cyber Security, ML → Web Dev, etc.), cap at 40
+            job_description_lower = job_description.lower() if job_description else ""
+            profile_skills_str = " ".join(profile.get("skills", [])).lower()
+            
+            # Detect domain mismatch
+            is_domain_mismatch = False
+            if any(keyword in job_description_lower for keyword in ["cyber security", "cybersecurity", "symantec dlp", "siem", "log analysis", "forensic analysis", "incident response", "security monitoring"]):
+                # Job is Cyber Security
+                if any(keyword in profile_skills_str for keyword in ["machine learning", "deep learning", "data science", "pandas", "numpy", "scikit-learn", "langchain", "ai", "genai"]):
+                    is_domain_mismatch = True  # ML/Data Science profile → Cyber Security job
+            elif any(keyword in job_description_lower for keyword in ["web developer", "react.js", "spring boot", "html5", "css3", "frontend", "backend developer"]):
+                # Job is Web Development
+                if any(keyword in profile_skills_str for keyword in ["machine learning", "deep learning", "data science", "pandas", "numpy", "scikit-learn", "langchain", "ai", "genai"]):
+                    is_domain_mismatch = True  # ML/Data Science profile → Web Dev job
+            
+            # Apply hard cap for domain mismatches
+            if is_domain_mismatch:
+                fit_score = min(int(fit_score), 40)  # Hard cap at 40 for domain mismatches
+                print(f"🔒 Domain mismatch detected - capping score at 40 (was {fit_result.get('fit_score', 0)})")
             
             fit_score = max(0, min(100, int(fit_score)))
             
