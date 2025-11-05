@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pip install --upgrade pip && pip install --no-cache-dir --no-warn-script-location -r requirements.txt",
+  "buildCommand": "chmod +x build.sh && bash build.sh",
   "installCommand": "echo 'Using buildCommand for installation'",
   "rewrites": [
     {
@@ -9,11 +9,22 @@
   ],
   "env": {
     "PYTHONUNBUFFERED": "1",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONHASHSEED": "random",
     "TRANSFORMERS_CACHE": "/tmp/transformers_cache",
     "HF_HOME": "/tmp/hf_home",
     "SENTENCE_TRANSFORMERS_HOME": "/tmp/st_cache",
+    "SENTENCE_TRANSFORMERS_DEVICE": "cpu",
     "TORCH_HOME": "/tmp/torch_cache",
-    "XDG_CACHE_HOME": "/tmp"
+    "XDG_CACHE_HOME": "/tmp",
+    "HF_DATASETS_CACHE": "/tmp/hf_datasets_cache",
+    "HF_METRICS_CACHE": "/tmp/hf_metrics_cache",
+    "HF_MODULES_CACHE": "/tmp/hf_modules_cache",
+    "TOKENIZERS_PARALLELISM": "false",
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
   }
 }
 

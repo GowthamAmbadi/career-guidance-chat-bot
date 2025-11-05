@@ -1,0 +1,5 @@
+# ML dependencies (memory intensive, install last)
+numpy==1.26.4
+scikit-learn==1.5.2
+sentence-transformers==3.0.1
+

@@ -1,0 +1,6 @@
+# Database dependencies
+supabase==2.6.0
+psycopg[binary]==3.2.1
+pgvector==0.3.3
+SQLAlchemy==2.0.35
+
