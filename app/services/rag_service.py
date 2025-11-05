@@ -5,6 +5,7 @@ from typing import List, Dict, Any
 from app.llm.embeddings import embed_texts
 from app.clients.supabase_client import get_supabase_client
 from app.llm.gemini_client import get_gemini_llm, create_career_coach_prompt
+from app.utils.text_utils import strip_html_tags
 from langchain.prompts import ChatPromptTemplate
 
 
@@ -200,12 +201,10 @@ CRITICAL FORMATTING RULES:
         })
         
         answer = response.content if hasattr(response, 'content') else str(response)
-    
         
         # CRITICAL: Strip ALL HTML tags from the answer - LLM should not generate HTML!
         # The frontend will handle formatting, so we return plain text only
         import re
-        import html
         
         # Log original answer for debugging
         original_answer = answer
@@ -216,39 +215,13 @@ CRITICAL FORMATTING RULES:
             print(f"   Original: {answer[:150]}...")
             print(f"   Original length: {len(answer)}")
         
-        # AGGRESSIVE HTML STRIPPING - Multiple passes to ensure nothing escapes
+        # Strip HTML tags using utility function
+        answer = strip_html_tags(answer)
         
-        # Pass 1: Remove sources-related HTML (exact patterns)
-        answer = re.sub(r'<br><br><small[^>]*>.*?[Ss]ources?.*?</small>', '', answer, flags=re.DOTALL | re.IGNORECASE)
-        answer = re.sub(r'<br><br>\s*<small[^>]*>.*?[Ss]ources?.*?</small>', '', answer, flags=re.DOTALL | re.IGNORECASE)
-        answer = re.sub(r'<small[^>]*>.*?[Ss]ources?.*?</small>', '', answer, flags=re.DOTALL | re.IGNORECASE)
-        answer = re.sub(r'<[^>]+>.*?[Ss]ources?.*?</[^>]+>', '', answer, flags=re.DOTALL | re.IGNORECASE)
-        
-        # Pass 2: Remove standalone "📚 Sources:" text patterns
-        answer = re.sub(r'📚\s*Sources?[:\s]*[^<\n]*', '', answer, flags=re.IGNORECASE)
-        
-        # Pass 3: Convert <br> tags to newlines BEFORE removing other tags
-        answer = re.sub(r'<br\s*/?>', '\n', answer, flags=re.IGNORECASE)
-        
-        # Pass 4: Remove ALL remaining HTML tags (aggressive - catch everything)
-        # This should catch any <tag> including <style>, <div>, <small>, etc.
-        answer = re.sub(r'<[^>]+>', '', answer)
-        
-        # Pass 5: Remove any broken tags (tags that don't close properly)
-        answer = re.sub(r'<[^>]*', '', answer)
-        
-        # Pass 6: Decode HTML entities (e.g., &amp; -> &)
-        answer = html.unescape(answer)
-        
-        # Pass 7: Remove any remaining HTML entities
-        answer = re.sub(r'&[a-zA-Z]+;', '', answer)
-        
-        # Pass 8: Clean up multiple newlines
-        answer = re.sub(r'\n{3,}', '\n\n', answer)
-        
-        # Pass 9: Final aggressive cleanup - remove ANY remaining HTML-like patterns
+        # Final check: if any HTML tags remain, log and remove them aggressively
         # This is a catch-all for anything that might have escaped
-        while '<' in answer and '>' in answer:
+        if '<' in answer and '>' in answer:
+            print(f"⚠️ WARNING: HTML tags still present after utility function!")
             answer = re.sub(r'<[^>]+>', '', answer)
             answer = re.sub(r'<[^>]*', '', answer)
         

@@ -103,6 +103,8 @@ def detect_intent(message: str, user_id: Optional[str] = None) -> Dict[str, Any]
         r'\b(?:what|which)\s+(?:should I|can I)\s+(?:do|become|pursue)',
         r'\b(?:career|job)\s+(?:recommendation|suggestion|advice)',
         r'\b(?:based on|according to)\s+my\s+(?:profile|skills|experience)',
+        r'\b(?:recommend|suggest|tell me about)\s+(?:careers?|career paths?|jobs?)\s+(?:based on|according to)\s+my\s+(?:profile|skills|experience)',
+        r'\b(?:recommend|suggest)\s+(?:careers?|career paths?|jobs?)\s+(?:for me|to me)',
     ]
     if any(re.search(pattern, message_lower) for pattern in career_patterns):
         return {

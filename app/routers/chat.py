@@ -8,6 +8,7 @@ from app.services.resume_parser import parse_resume_text
 from app.llm.chains import get_career_recommendation_chain, get_skill_gap_chain, get_job_fit_chain
 from app.clients.supabase_client import get_supabase_client
 from app.models.schemas import Profile
+from app.utils.text_utils import strip_html_tags, clean_job_description
 from langchain.prompts import ChatPromptTemplate
 import json
 import re
@@ -21,73 +22,6 @@ except ImportError:
 
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-
-
-def clean_job_description(jd_text: str) -> str:
-    """
-    Clean and normalize job description text.
-    - Fixes skills that are run together (e.g., "JavaHibernateSpring Boot" -> "Java, Hibernate, Spring Boot")
-    - Adds proper spacing and formatting
-    - Removes excessive whitespace
-    """
-    if not jd_text:
-        return ""
-    
-    # Common technology/framework names that should be separated
-    tech_keywords = [
-        'Java', 'Hibernate', 'Spring Boot', 'Spring', 'Microservices', 'JSP', 'Servlets', 
-        'Struts', 'J2EE', 'React', 'Angular', 'Vue', 'Node.js', 'Python', 'Docker', 
-        'Kubernetes', 'AWS', 'Azure', 'GCP', 'Jenkins', 'GitLab', 'CI/CD', 'REST', 
-        'GraphQL', 'MongoDB', 'PostgreSQL', 'MySQL', 'Redis', 'Kafka', 'RabbitMQ',
-        'TypeScript', 'JavaScript', 'HTML5', 'CSS3', 'Redux', 'Express', 'Django', 'Flask'
-    ]
-    
-    # Step 1: Add spaces before capital letters that follow lowercase letters or numbers
-    # This helps separate "JavaHibernate" -> "Java Hibernate"
-    cleaned = re.sub(r'([a-z0-9])([A-Z])', r'\1 \2', jd_text)
-    
-    # Step 2: Separate known technology keywords that might be concatenated
-    for tech in sorted(tech_keywords, key=len, reverse=True):  # Sort by length to match longer first
-        # Pattern: word boundary or start, then tech name (case-insensitive), then word boundary or end
-        pattern = rf'(?i)(?<![A-Za-z0-9]){re.escape(tech)}(?![A-Za-z0-9])'
-        # Replace with space-padded version if not already spaced
-        cleaned = re.sub(pattern, f' {tech} ', cleaned)
-    
-    # Step 3: Fix common concatenations like "JavaHibernate" -> "Java, Hibernate"
-    # Look for patterns like "TechnologyNameTechnologyName" (capital letter sequences)
-    # This is a more aggressive approach to separate concatenated tech names
-    def separate_tech_words(match):
-        text = match.group(0)
-        # Split on capital letters but keep them
-        parts = re.findall(r'[A-Z][a-z]+', text)
-        if len(parts) > 1:
-            return ', '.join(parts)
-        return text
-    
-    # Match patterns like "JavaHibernate" or "SpringBoot" (capital letter sequences)
-    cleaned = re.sub(r'([A-Z][a-z]+)([A-Z][a-z]+)+', separate_tech_words, cleaned)
-    
-    # Step 4: Clean up multiple spaces and normalize whitespace
-    cleaned = re.sub(r'\s+', ' ', cleaned)
-    cleaned = re.sub(r'\n\s*\n', '\n\n', cleaned)  # Normalize line breaks
-    
-    # Step 5: Fix common formatting issues
-    # Remove trailing spaces from lines
-    lines = [line.strip() for line in cleaned.split('\n')]
-    cleaned = '\n'.join(lines)
-    
-    # Step 6: Ensure proper spacing around common separators
-    cleaned = re.sub(r':([A-Za-z])', r': \1', cleaned)  # "Key Skills:Java" -> "Key Skills: Java"
-    cleaned = re.sub(r'([A-Za-z])(->)', r'\1 \2', cleaned)  # "Technology->Java" -> "Technology -> Java"
-    
-    # Step 7: Fix skills list formatting (often at the end)
-    # Look for patterns like "JavaHibernateSpring Boot" and separate them
-    # Match sequences of tech-looking words (capital letters followed by lowercase)
-    tech_pattern = r'([A-Z][a-z]+(?: [A-Z][a-z]+)?)([A-Z][a-z]+)'
-    while re.search(tech_pattern, cleaned):
-        cleaned = re.sub(tech_pattern, r'\1, \2', cleaned)
-    
-    return cleaned.strip()
 
 
 class ChatMessage(BaseModel):
@@ -210,6 +144,13 @@ Try asking: *"What careers are good for me?"*"""
             profile = res.data[0]
             skills = profile.get("skills", []) or []
             experience = profile.get("experience_summary", "") or ""
+            
+            # Check if profile has any skills or experience
+            if not skills and not experience:
+                return ChatResponse(
+                    response="⚠️ Your profile doesn't have any skills or experience information yet. Please **upload your resume** using the '📄 Upload Resume' button above so I can recommend careers based on your skills and experience.\n\n💡 Once you upload your resume, I'll save your profile and you can ask me for career recommendations!",
+                    sources=None
+                )
             
             try:
                 chain = get_career_recommendation_chain()
@@ -1480,31 +1421,8 @@ This goal already exists. Ask me *"What are my goals?"* to see all your goals.""
             
             original_response = response_text
             
-            # Step 1: Remove sources-related HTML first (multiple passes)
-            response_text = regex_module.sub(r'<br><br><small[^>]*>.*?[Ss]ources?.*?</small>', '', response_text, flags=regex_module.DOTALL | regex_module.IGNORECASE)
-            response_text = regex_module.sub(r'<small[^>]*>.*?[Ss]ources?.*?</small>', '', response_text, flags=regex_module.DOTALL | regex_module.IGNORECASE)
-            response_text = regex_module.sub(r'<[^>]+>.*?[Ss]ources?.*?</[^>]+>', '', response_text, flags=regex_module.DOTALL | regex_module.IGNORECASE)
-            response_text = regex_module.sub(r'📚\s*Sources?[:\s]*[^<\n]*', '', response_text, flags=regex_module.IGNORECASE)
-            
-            # Step 2: Convert <br> tags to newlines BEFORE removing other tags
-            response_text = regex_module.sub(r'<br\s*/?>', '\n', response_text, flags=regex_module.IGNORECASE)
-            
-            # Step 3: Remove ALL remaining HTML tags (aggressive - catch everything)
-            response_text = regex_module.sub(r'<[^>]+>', '', response_text)
-            
-            # Step 4: Decode HTML entities
-            response_text = html_module.unescape(response_text)
-            
-            # Step 5: Clean up multiple newlines
-            response_text = regex_module.sub(r'\n{3,}', '\n\n', response_text)
-            
-            # Step 6: Remove any remaining HTML entities
-            response_text = regex_module.sub(r'&[a-zA-Z]+;', '', response_text)
-            
-            # Step 7: Final aggressive cleanup - remove any broken tags
-            response_text = regex_module.sub(r'<[^>]*', '', response_text)
-            
-            response_text = response_text.strip()
+            # Strip HTML tags using utility function
+            response_text = strip_html_tags(response_text)
             
             # Final check: if any HTML tags remain, log and remove them aggressively
             if '<' in response_text and '>' in response_text:
@@ -1639,6 +1557,47 @@ Return ONLY a JSON array of skills as strings."""),
                         print(f"   Traceback: {error_trace}")
                         # Continue to default handler
             
+            # Check if message is asking for career recommendations based on profile/skills
+            # If so, require a profile to exist
+            message_lower = req.message.lower()
+            is_career_recommendation_query = (
+                any(keyword in message_lower for keyword in ['recommend', 'suggest', 'what careers', 'career recommendation', 'career suggestion']) and
+                any(keyword in message_lower for keyword in ['based on my', 'according to my', 'for me', 'my skills', 'my profile', 'my experience'])
+            )
+            
+            if is_career_recommendation_query:
+                if not req.user_id:
+                    return ChatResponse(
+                        response="⚠️ I need your profile to recommend careers. Please upload your resume first or provide your user_id.",
+                        sources=None
+                    )
+                
+                # Check if profile exists and has data
+                try:
+                    res = sb.table("profiles").select("*").eq("user_id", req.user_id).execute()
+                    if not res.data:
+                        return ChatResponse(
+                            response="⚠️ I don't have your profile yet. Please **upload your resume** using the '📄 Upload Resume' button above so I can recommend careers based on your skills and experience.\n\n💡 Once you upload your resume, I'll save your profile and you can ask me for career recommendations!",
+                            sources=None
+                        )
+                    
+                    # Check if profile has skills or experience
+                    profile = res.data[0]
+                    skills = profile.get("skills", []) or []
+                    experience = profile.get("experience_summary", "") or ""
+                    
+                    if not skills and not experience:
+                        return ChatResponse(
+                            response="⚠️ Your profile doesn't have any skills or experience information yet. Please **upload your resume** using the '📄 Upload Resume' button above so I can recommend careers based on your skills and experience.\n\n💡 Once you upload your resume, I'll save your profile and you can ask me for career recommendations!",
+                            sources=None
+                        )
+                except Exception as e:
+                    print(f"❌ Error checking profile for career recommendation: {str(e)}")
+                    return ChatResponse(
+                        response="⚠️ Error checking your profile. Please try uploading your resume again.",
+                        sources=None
+                    )
+            
             rag_result = await query_career_knowledge(req.message, top_k=3) if req.use_rag else {"answer": "", "sources": []}
             
             # Build conversation context
@@ -1696,21 +1655,8 @@ CRITICAL FORMATTING RULES:
             # CRITICAL: Strip ALL HTML tags from response - return plain text only!
             # Same logic as RAG service - the frontend will handle formatting
             
-            # Step 1: Remove sources-related HTML first
-            answer = regex_module.sub(r'<br><br><small[^>]*>.*?[Ss]ources?.*?</small>', '', answer, flags=regex_module.DOTALL | regex_module.IGNORECASE)
-            answer = regex_module.sub(r'<small[^>]*>.*?[Ss]ources?.*?</small>', '', answer, flags=regex_module.DOTALL | regex_module.IGNORECASE)
-            answer = regex_module.sub(r'<[^>]+>.*?[Ss]ources?.*?</[^>]+>', '', answer, flags=regex_module.DOTALL | regex_module.IGNORECASE)
-            answer = regex_module.sub(r'📚\s*Sources?[:\s]*[^<\n]*', '', answer, flags=regex_module.IGNORECASE)
-            
-            # Step 2: Convert <br> tags to newlines (preserve formatting)
-            answer = regex_module.sub(r'<br\s*/?>', '\n', answer, flags=regex_module.IGNORECASE)
-            # Step 3: Remove ALL remaining HTML tags
-            answer = regex_module.sub(r'<[^>]+>', '', answer)
-            # Step 4: Decode HTML entities
-            answer = html.unescape(answer)
-            # Step 5: Clean up multiple newlines
-            answer = regex_module.sub(r'\n{3,}', '\n\n', answer)
-            answer = answer.strip()
+            # Strip HTML tags using utility function
+            answer = strip_html_tags(answer)
             
             return ChatResponse(
                 response=answer,
