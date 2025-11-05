@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Career Guidance - AI Career Guidance Chatbot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f8f9fa;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .chat-container {
+            width: 100%;
+            height: 100vh;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: white;
+            padding: 24px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .chat-header h1 {
+            font-size: 26px;
+            margin-bottom: 6px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        
+        .chat-header p {
+            opacity: 0.85;
+            font-size: 14px;
+            font-weight: 400;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+            scroll-behavior: smooth;
+        }
+        
+        /* Custom scrollbar styling */
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            animation: fadeIn 0.4s ease-out;
+            position: relative;
+        }
+        
+        @keyframes fadeIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(15px) scale(0.95); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            }
+        }
+        
+        .message.user {
+            justify-content: flex-end;
+        }
+        
+        .message.assistant {
+            justify-content: flex-start;
+        }
+        
+        .message-content {
+            max-width: 75%;
+            padding: 14px 18px;
+            border-radius: 20px;
+            word-wrap: break-word;
+            line-height: 1.6;
+            position: relative;
+        }
+        
+        .message.assistant .message-content.welcome-content {
+            max-width: 100%;
+            width: 100%;
+        }
+        
+        .message.user .message-content {
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+            color: white;
+            border-bottom-right-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .message.assistant .message-content {
+            background: white;
+            color: #2d2d2d;
+            border-bottom-left-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            border: 1px solid #f0f0f0;
+        }
+        
+        .message-time {
+            font-size: 11px;
+            opacity: 0.6;
+            margin-top: 6px;
+            text-align: right;
+        }
+        
+        .message.user .message-time {
+            text-align: right;
+        }
+        
+        .message.assistant .message-time {
+            text-align: left;
+        }
+        
+        .chat-input-container {
+            padding: 20px 24px;
+            background: white;
+            border-top: 1px solid #e8e8e8;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .chat-input-form {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        
+        .chat-input {
+            flex: 1;
+            padding: 14px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 24px;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.3s ease;
+            resize: none;
+            overflow-y: auto;
+            min-height: 24px;
+            max-height: 150px;
+            font-family: inherit;
+            line-height: 1.5;
+            background: #fafafa;
+        }
+        
+        .chat-input:focus {
+            border-color: #000000;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+        }
+        
+        .chat-input::placeholder {
+            color: #999;
+        }
+        
+        .send-button {
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+            color: white;
+            border: none;
+            border-radius: 24px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            white-space: nowrap;
+        }
+        
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+            background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
+        }
+        
+        .send-button:active {
+            transform: translateY(0);
+        }
+        
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .typing-indicator {
+            display: none;
+            padding: 14px 18px;
+            background: white;
+            border-radius: 20px;
+            border-bottom-left-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            border: 1px solid #f0f0f0;
+            margin-bottom: 20px;
+        }
+        
+        .typing-indicator.active {
+            display: inline-block;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        .typing-dots {
+            display: inline-block;
+        }
+        
+        .typing-dots span {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #000000;
+            margin: 0 3px;
+            animation: typing 1.4s infinite;
+        }
+        
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+        
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #c33;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .action-btn {
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid #000000;
+            border-radius: 22px;
+            color: #000000;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        
+        .action-btn:hover {
+            background: #000000;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .action-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        
+        .upload-status {
+            padding: 8px 12px;
+            background: #e3f2fd;
+            border-left: 3px solid #2196f3;
+            border-radius: 5px;
+            margin: 5px 0;
+            font-size: 13px;
+        }
+        
+        .upload-status.success {
+            background: #e8f5e9;
+            border-left-color: #4caf50;
+        }
+        
+        .upload-status.error {
+            background: #ffebee;
+            border-left-color: #f44336;
+        }
+        
+        .suggestion-btn {
+            display: inline-block;
+            padding: 8px 14px;
+            margin: 4px 3px;
+            background: #f8f9fa;
+            border: 2px solid #000000;
+            border-radius: 18px;
+            color: #000000;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        
+        .suggestion-btn:hover {
+            background: #000000;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .suggestion-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        
+        .welcome-message {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 10px;
+            width: 100%;
+        }
+        
+        @media (max-width: 1200px) {
+            .welcome-message {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .welcome-message {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .feature-card {
+            background: white;
+            border: 2px solid #e8e8e8;
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .feature-card:hover {
+            border-color: #000000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+        }
+        
+        .feature-card strong {
+            display: block;
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: #000000;
+            font-weight: 700;
+        }
+        
+        .feature-card .feature-items {
+            font-size: 13px;
+            line-height: 1.8;
+            color: #333;
+        }
+        
+        .welcome-header {
+            margin-bottom: 20px;
+        }
+        
+        .welcome-header strong {
+            font-size: 18px;
+            color: #000000;
+            margin-bottom: 8px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🤖 Career Guidance</h1>
+            <p>Your AI Career Guidance Coach</p>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="message assistant">
+                <div class="message-content welcome-content">
+                    <div class="welcome-header">
+                        👋 Hello! I'm <strong>Career Guidance</strong>
+                        <br>
+                        <strong>🎯 All Features Available in Chat:</strong>
+                    </div>
+                    <div class="welcome-message">
+                        <div class="feature-card">
+                            <strong>1. Resume Parsing</strong>
+                            <div class="feature-items">
+                                • Click "📄 Upload Resume" button above, OR<br>
+                                • Just paste your resume text and I'll parse it!
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <strong>2. Career Recommendations</strong>
+                            <div class="feature-items">
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('What careers are good for me?')">Ask: "What careers are good for me?"</button><br>
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('Recommend careers based on my skills')">Ask: "Recommend careers based on my skills"</button>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <strong>3. Skill Gap Analysis</strong>
+                            <div class="feature-items">
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('What skills do I need for Data Scientist?')">Ask: "What skills do I need for Data Scientist?"</button><br>
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('Analyze my skills for Software Engineer')">Ask: "Analyze my skills for Software Engineer"</button>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <strong>4. Job Fit Assessment</strong>
+                            <div class="feature-items">
+                                • Paste a job description and I'll analyze your fit!<br>
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('How well do I fit this job?')">Ask: "How well do I fit this job?"</button>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <strong>5. Goal Setting & Tracking</strong>
+                            <div class="feature-items">
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('Set a goal to learn Python')">Say: "Set a goal to learn Python"</button><br>
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('What are my goals?')">Say: "What are my goals?"</button>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <strong>6. Career Knowledge (RAG)</strong>
+                            <div class="feature-items">
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('What is the job outlook for Data Scientists?')">Ask: "What is the job outlook for Data Scientists?"</button><br>
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('Tell me about Software Engineering career')">Ask: "Tell me about Software Engineering career"</button>
+                            </div>
+                        </div>
+                    </div>
+                    <br>
+                    <strong>💡 Try it:</strong> Start by uploading your resume, then ask me anything!
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-input-container">
+            <div class="action-buttons">
+                <button class="action-btn" id="uploadResumeBtn" title="Upload Resume">
+                    📄 Upload Resume
+                </button>
+                <input type="file" id="resumeFileInput" accept=".txt,.doc,.docx,.pdf" style="display: none;">
+            </div>
+            <form class="chat-input-form" id="chatForm">
+                <textarea 
+                    class="chat-input" 
+                    id="messageInput" 
+                    placeholder="Type your message here... (or upload resume above)"
+                    autocomplete="off"
+                    rows="1"
+                ></textarea>
+                <button type="submit" class="send-button" id="sendButton">Send</button>
+            </form>
+        </div>
+        
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="typing-dots">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const chatForm = document.getElementById('chatForm');
+        const sendButton = document.getElementById('sendButton');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const uploadResumeBtn = document.getElementById('uploadResumeBtn');
+        const resumeFileInput = document.getElementById('resumeFileInput');
+        
+        let conversationHistory = [];
+        let currentUserId = null; // Will be set after resume parsing
+        
+        // Handle suggestion button clicks
+        function handleSuggestionClick(suggestionText) {
+            messageInput.value = suggestionText;
+            messageInput.focus();
+            // Optionally auto-send: uncomment the line below if you want auto-send
+            // sendMessage();
+        }
+        
+        // Convert suggestion text to clickable buttons
+        function convertSuggestionsToButtons(content) {
+            // Pattern to match suggestions like: ✅ Ask: "..." - Description
+            const suggestionPattern = /✅\s*(Ask|Say|Paste):\s*"([^"]+)"(\s*-\s*[^✅\n]*)?/g;
+            
+            return content.replace(suggestionPattern, (match, action, text, description) => {
+                const buttonText = `${action}: "${text}"`;
+                const desc = description ? description.trim() : '';
+                return `✅ <button class="suggestion-btn" onclick="handleSuggestionClick('${text.replace(/'/g, "\\'")}')">${buttonText}</button>${desc ? ' ' + desc : ''}`;
+            });
+        }
+        
+        // Try to get or create user_id from localStorage
+        // CRITICAL: Use email-based user_id if available to ensure each user gets their own unique ID
+        function getOrCreateUserId() {
+            // First, try to get email-based user_id from localStorage
+            let email = localStorage.getItem('careerguidance_user_email');
+            if (email && email !== 'unknown@example.com') {
+                // Generate user_id based on email to ensure uniqueness per user
+                const emailBasedUserId = 'user_' + btoa(email).replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
+                console.log('📧 Using email-based user_id:', emailBasedUserId, 'for email:', email);
+                return emailBasedUserId;
+            }
+            
+            // Fallback: Generate a temporary user_id (will be updated when resume is uploaded)
+            let userId = localStorage.getItem('careerguidance_user_id');
+            if (!userId) {
+                // Generate a simple UUID-like ID
+                userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('careerguidance_user_id', userId);
+            }
+            console.log('👤 Using temporary user_id:', userId);
+            return userId;
+        }
+        
+        currentUserId = getOrCreateUserId();
+        
+        // Convert markdown to HTML
+        function markdownToHtml(text) {
+            if (!text) return '';
+            
+            let html = text;
+            
+            // First, ensure any HTML tags are removed (should already be done, but safety check)
+            html = html.replace(/<[^>]+>/g, '');
+            html = html.replace(/<[^>]*/g, '');
+            
+            // Convert markdown headings to bold text (remove ### symbols)
+            // Convert ### Heading to **Heading** (which will be converted to bold later)
+            html = html.replace(/^###\s+(.+)$/gm, '**$1**');
+            html = html.replace(/^##\s+(.+)$/gm, '**$1**');
+            html = html.replace(/^#\s+(.+)$/gm, '**$1**');
+            
+            // Escape HTML to prevent XSS
+            const div = document.createElement('div');
+            div.textContent = html;
+            html = div.innerHTML;
+            
+            // Convert markdown bold **text** to <strong>text</strong>
+            // Use placeholder to avoid conflicts with italic
+            html = html.replace(/\*\*([^*]+?)\*\*/g, '___BOLD_PLACEHOLDER___$1___BOLD_END_PLACEHOLDER___');
+            
+            // Convert markdown italic *text* to <em>text</em> (only single *, not **)
+            html = html.replace(/\*([^*\n]+?)\*/g, '<em>$1</em>');
+            
+            // Restore bold placeholders to actual HTML
+            html = html.replace(/___BOLD_PLACEHOLDER___/g, '<strong>');
+            html = html.replace(/___BOLD_END_PLACEHOLDER___/g, '</strong>');
+            
+            // Handle sources line specially - convert to styled HTML
+            html = html.replace(/📚\s*Sources?[:\s]*(.+?)(?:\n|$)/gi, '<br><br><small style="opacity:0.7;">📚 Sources: $1</small>');
+            
+            // Convert line breaks to <br>
+            html = html.replace(/\n/g, '<br>');
+            
+            return html;
+        }
+        
+        function addMessage(role, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            let htmlContent;
+            if (role === 'assistant') {
+                // For assistant messages, convert markdown to HTML
+                htmlContent = markdownToHtml(content);
+                // Convert suggestions to clickable buttons
+                htmlContent = convertSuggestionsToButtons(htmlContent);
+            } else {
+                // For user messages: escape HTML safely, then convert newlines to <br>
+                // Step 1: Use a placeholder for newlines to preserve them
+                const NEWLINE_PLACEHOLDER = '___NEWLINE_PLACEHOLDER___';
+                let processed = content.replace(/\n/g, NEWLINE_PLACEHOLDER);
+                
+                // Step 2: Escape all HTML tags safely
+                const div = document.createElement('div');
+                div.textContent = processed;
+                processed = div.innerHTML;
+                
+                // Step 3: Replace placeholder with <br> tags (now safe from escaping)
+                htmlContent = processed.replace(new RegExp(NEWLINE_PLACEHOLDER, 'g'), '<br>');
+            }
+            
+            // Get current time for timestamp
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: true 
+            });
+            
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    ${htmlContent}
+                    <div class="message-time">${timeString}</div>
+                </div>
+            `;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Add to conversation history
+            conversationHistory.push({ role, content });
+        }
+        
+        function showTyping() {
+            typingIndicator.classList.add('active');
+            typingIndicator.style.display = 'block';
+            chatMessages.appendChild(typingIndicator);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function hideTyping() {
+            typingIndicator.classList.remove('active');
+            typingIndicator.style.display = 'none';
+            if (typingIndicator.parentNode) {
+                typingIndicator.parentNode.removeChild(typingIndicator);
+            }
+        }
+        
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+            
+            // Add user message
+            addMessage('user', message);
+            messageInput.value = '';
+            messageInput.style.height = 'auto'; // Reset textarea height
+            sendButton.disabled = true;
+            
+            // Show typing indicator
+            showTyping();
+            
+            try {
+                // Log user_id before sending request
+                console.log('📤 Sending chat request with user_id:', currentUserId);
+                console.log('📧 Email stored:', localStorage.getItem('careerguidance_user_email'));
+                
+                const response = await fetch('http://localhost:8000/chat/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        user_id: currentUserId,
+                        conversation_history: conversationHistory.slice(-10), // Last 10 messages
+                        use_rag: true
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                hideTyping();
+                
+                // Log for debugging
+                console.log('💬 Chat request with user_id:', currentUserId);
+                console.log('📨 Response:', data);
+                
+                // Add assistant response
+                let responseText = data.response;
+                
+                // CRITICAL: Remove ALL HTML tags from response (backend should have done this, but be safe)
+                // Multiple passes to ensure ALL HTML is removed before markdown processing
+                
+                // Pass 1: Remove sources-related HTML patterns first
+                responseText = responseText.replace(/<br><br><small[^>]*>.*?<\/small>/gi, '');
+                responseText = responseText.replace(/<br>\s*<small[^>]*>.*?<\/small>/gi, '');
+                responseText = responseText.replace(/<small[^>]*>.*?<\/small>/gi, '');
+                
+                // Pass 2: Remove ALL HTML tags (most aggressive - catches everything)
+                responseText = responseText.replace(/<[^>]+>/g, '');
+                responseText = responseText.replace(/<[^>]*/g, '');  // Catch broken tags
+                
+                // Pass 3: Remove sources text patterns (after HTML tags are gone)
+                responseText = responseText.replace(/📚\s*Sources?[:\s]*[^\n]*/gi, '');
+                
+                // Pass 4: Clean up multiple newlines and whitespace
+                responseText = responseText.replace(/\n{3,}/g, '\n\n');
+                responseText = responseText.replace(/[ \t]+/g, ' ');  // Multiple spaces to single space
+                responseText = responseText.trim();
+                
+                // Pass 5: Final safety check - remove any remaining HTML-like patterns
+                while (responseText.includes('<') && responseText.includes('>')) {
+                    responseText = responseText.replace(/<[^>]+>/g, '');
+                    responseText = responseText.replace(/<[^>]*/g, '');
+                    responseText = responseText.trim();
+                }
+                
+                // Now process the clean text (markdownToHtml will handle markdown formatting)
+                // Add sources only once at the end (as HTML, not in response text)
+                // The markdownToHtml function will convert markdown to HTML, then we add sources
+                let finalResponse = responseText;
+                if (data.sources && data.sources.length > 0) {
+                    // Remove duplicates from sources
+                    const uniqueSources = [...new Map(data.sources.map(s => [s.career_title || 'Career Info', s])).values()];
+                    finalResponse = responseText + '\n\n📚 Sources: ' + 
+                        uniqueSources.map(s => s.career_title || 'Career Info').join(', ');
+                }
+                
+                addMessage('assistant', finalResponse);
+                
+            } catch (error) {
+                hideTyping();
+                addMessage('assistant', `❌ Error: ${error.message}. Please make sure the API server is running at http://localhost:8000`);
+            } finally {
+                sendButton.disabled = false;
+                messageInput.focus();
+            }
+        }
+        
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            sendMessage();
+        });
+        
+        // Handle Enter key: Enter submits, Shift+Enter creates new line
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+            // Shift+Enter will create a new line (default behavior)
+        });
+        
+        // Auto-resize textarea based on content
+        messageInput.addEventListener('input', () => {
+            // Reset height to auto to get the correct scrollHeight
+            messageInput.style.height = 'auto';
+            // Set height to scrollHeight, but cap at max-height
+            const newHeight = Math.min(messageInput.scrollHeight, 150);
+            messageInput.style.height = newHeight + 'px';
+        });
+        
+        // Resume upload functionality
+        uploadResumeBtn.addEventListener('click', () => {
+            resumeFileInput.click();
+        });
+        
+        resumeFileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Show upload status
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'message assistant';
+            statusDiv.innerHTML = '<div class="message-content"><div class="upload-status">📄 Uploading resume: ' + file.name + '...</div></div>';
+            chatMessages.appendChild(statusDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('user_id', currentUserId);
+                
+                const response = await fetch('http://localhost:8000/resume/parse', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    // Try to get error message from response
+                    let errorMsg = `HTTP error! status: ${response.status}`;
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.detail) {
+                            errorMsg = errorData.detail;
+                        }
+                    } catch (e) {
+                        // If JSON parsing fails, use default message
+                    }
+                    throw new Error(errorMsg);
+                }
+                
+                const data = await response.json();
+                
+                // CRITICAL: Generate a new user_id based on email if available
+                // This ensures each user (identified by email) gets their own user_id
+                if (data.email && data.email !== 'unknown@example.com') {
+                    // Generate user_id based on email to ensure uniqueness per user
+                    // This prevents different users from sharing the same user_id
+                    const emailBasedUserId = 'user_' + btoa(data.email).replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
+                    if (currentUserId !== emailBasedUserId) {
+                        console.log('🔄 Updating user_id from email:', currentUserId, '->', emailBasedUserId);
+                        currentUserId = emailBasedUserId;
+                        // Store both user_id and email for future use
+                        localStorage.setItem('careerguidance_user_id', emailBasedUserId);
+                        localStorage.setItem('careerguidance_user_email', data.email);
+                        console.log('✅ Stored email-based user_id:', emailBasedUserId, 'for email:', data.email);
+                    }
+                }
+                
+                // Log user_id for debugging
+                console.log('📄 Resume uploaded for user_id:', currentUserId);
+                console.log('📋 Parsed data:', data);
+                
+                // Update status to success
+                statusDiv.innerHTML = '<div class="message-content"><div class="upload-status success">✅ Resume parsed successfully!</div></div>';
+                
+                // Show parsed data
+                const parsedDiv = document.createElement('div');
+                parsedDiv.className = 'message assistant';
+                let parsedInfo = `<strong>📋 Resume Parsed:</strong><br>`;
+                parsedInfo += `👤 Name: ${data.name || 'Not found'}<br>`;
+                parsedInfo += `📧 Email: ${data.email || 'Not found'}<br>`;
+                parsedInfo += `💼 Experience: ${data.experience ? (data.experience.substring(0, 100) + '...') : 'Not found'}<br>`;
+                parsedInfo += `🛠️ Skills: ${data.skills && data.skills.length > 0 ? data.skills.join(', ') : 'Not found'}<br><br>`;
+                parsedInfo += `💡 Tip: Ask me about career recommendations based on your profile!`;
+                
+                parsedDiv.innerHTML = `<div class="message-content">${parsedInfo}</div>`;
+                chatMessages.appendChild(parsedDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+                // Add assistant message suggesting next steps with clickable buttons
+                setTimeout(() => {
+                    addMessage('assistant', 
+                        'Great! I\'ve parsed your resume and saved your profile. Now you can:\n\n' +
+                        '✅ Ask: "What careers are good for me?" - Get personalized recommendations\n' +
+                        '✅ Ask: "What skills do I need for Data Scientist?" - Skill gap analysis\n' +
+                        '✅ Paste a job description - Get job fit score\n' +
+                        '✅ Say: "Set a goal to learn Python" - Track your goals\n' +
+                        '✅ Ask: "Tell me about Data Science career" - Get insights\n\n' +
+                        '💬 Just type naturally - I understand what you need!'
+                    );
+                }, 1000);
+                
+            } catch (error) {
+                statusDiv.innerHTML = '<div class="message-content"><div class="upload-status error">❌ Error uploading resume: ' + error.message + '</div></div>';
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            // Reset file input
+            resumeFileInput.value = '';
+        });
+        
+        // Auto-focus input
+        messageInput.focus();
+    </script>
+</body>
+</html>
+
