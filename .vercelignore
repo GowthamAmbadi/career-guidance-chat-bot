@@ -4,6 +4,9 @@ __pycache__/
 *$py.class
 *.so
 .Python
+*.pyc
+*.pyo
+*.pyd
 
 # Virtual environments
 .venv/
@@ -17,6 +20,7 @@ dist/
 *.egg-info/
 .eggs/
 *.egg
+site-packages/
 
 # Development files
 .git/
@@ -29,6 +33,9 @@ database/migrations/
 *.sql
 *.sqlite
 *.db
+tests/
+test_*.py
+*_test.py
 
 # IDE
 .vscode/
@@ -51,6 +58,7 @@ logs/
 htmlcov/
 .tox/
 .nox/
+.pytest_cache/
 
 # Model cache (will be downloaded at runtime)
 .cache/
@@ -59,8 +67,29 @@ models/
 *.pkl
 *.model
 *.weights
+*.bin
+*.safetensors
+*.onnx
+
+# Large ML libraries - exclude unnecessary files
+# PyTorch and transformers have large files that aren't always needed
+**/torch/lib/
+**/torch/share/
+**/transformers/models/*/model*.bin
+**/transformers/models/*/*.onnx
+**/transformers/models/*/tf_model.h5
+**/sentence_transformers/models/*/model*.bin
 
 # Documentation
 *.md
 !README.md
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Large data files
+*.csv
+*.json
+!package.json
 

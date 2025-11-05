@@ -41,6 +41,15 @@ uv pip install --system --no-cache \
     numpy==1.26.4 \
     scikit-learn==1.5.2
 
+# Install CPU-only PyTorch (much smaller ~200MB vs ~1.5GB for full PyTorch)
+echo "Installing CPU-only PyTorch (optimized for size)..."
+uv pip install --system --no-cache \
+    torch==2.1.0+cpu torchvision==0.16.0+cpu torchaudio==2.1.0+cpu \
+    --index-url https://download.pytorch.org/whl/cpu || \
+uv pip install --system --no-cache \
+    torch==2.1.0+cpu \
+    --index-url https://download.pytorch.org/whl/cpu
+
 # Install sentence-transformers last (most memory intensive) - only binary wheels
 echo "Installing sentence-transformers (binary only)..."
 uv pip install --system --no-cache \
@@ -48,6 +57,29 @@ uv pip install --system --no-cache \
     sentence-transformers==3.0.1 || \
 uv pip install --system --no-cache \
     sentence-transformers==3.0.1
+
+# Clean up unnecessary files to reduce bundle size
+echo "Cleaning up unnecessary files to reduce bundle size..."
+# Remove Python cache files
+find /usr/local/lib/python3.12/site-packages -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.pyc" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.pyo" -delete 2>/dev/null || true
+
+# Remove documentation files (keep METADATA files)
+find /usr/local/lib/python3.12/site-packages -name "*.md" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.txt" ! -name "METADATA" -delete 2>/dev/null || true
+
+# Remove test files
+find /usr/local/lib/python3.12/site-packages -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -type d -name "test" -exec rm -rf {} + 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*_test.py" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "test_*.py" -delete 2>/dev/null || true
+
+# Remove unnecessary PyTorch CUDA files (if any)
+find /usr/local/lib/python3.12/site-packages/torch -name "cu*" -type f -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages/torch -name "*.cudnn*" -delete 2>/dev/null || true
+
+echo "Cleanup complete. Bundle size optimized."
 
 echo ""
 echo "=========================================="
