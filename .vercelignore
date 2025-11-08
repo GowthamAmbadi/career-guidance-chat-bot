@@ -1,95 +1,78 @@
+# Documentation files
+*.md
+README.md
+USER_GUIDE.md
+FEATURE_IMPLEMENTATION.md
+CAREER_GUIDANCE.md
+CHANGES_SUMMARY.md
+
+# Database files
+database/
+*.sql
+
+# Scripts
+scripts/
+*.sh
+build.sh
+optimize_bundle.sh
+
+# Static assets (should be served separately)
+static/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.pdf
+
+# Development files
+.env.local
+.env.development
+.env.test
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
 # Python cache
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
 *.pyc
 *.pyo
 *.pyd
-
-# Virtual environments
+.pytest_cache/
 .venv/
 venv/
-ENV/
 env/
+ENV/
 
-# Build artifacts
-build/
-dist/
-*.egg-info/
-.eggs/
-*.egg
-site-packages/
-
-# Development files
-.git/
-.github/
-*.md
-*.txt
-!requirements.txt
-scripts/
-database/migrations/
-*.sql
-*.sqlite
-*.db
-tests/
-test_*.py
-*_test.py
-
-# IDE
+# IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
-# OS files
-.DS_Store
-Thumbs.db
-Desktop.ini
+# Git
+.git/
+.gitignore
 
-# Logs
-*.log
-logs/
+# Node modules (if any)
+node_modules/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
 
 # Test files
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.nox/
-.pytest_cache/
+tests/
+test/
+*_test.py
+test_*.py
 
-# Model cache (will be downloaded at runtime)
-.cache/
-models/
-*.h5
-*.pkl
-*.model
-*.weights
-*.bin
-*.safetensors
-*.onnx
-
-# Large ML libraries - exclude unnecessary files
-# PyTorch and transformers have large files that aren't always needed
-**/torch/lib/
-**/torch/share/
-**/transformers/models/*/model*.bin
-**/transformers/models/*/*.onnx
-**/transformers/models/*/tf_model.h5
-**/sentence_transformers/models/*/model*.bin
-
-# Documentation
-*.md
-!README.md
-
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb
-
-# Large data files
-*.csv
-*.json
-!package.json
-
+# Requirements files (only need requirements.txt)
+requirements-core.txt
+requirements-db.txt
+requirements-langchain.txt
+requirements-ml.txt
+requirements-parsing.txt
