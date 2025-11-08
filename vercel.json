@@ -9,7 +9,7 @@
   ],
   "functions": {
     "api/index.py": {
-      "excludeFiles": "**/{.git,__pycache__,.pytest_cache,*.pyc,*.pyo,*.pyd,.venv,venv,env,ENV,node_modules,.next,.cache,dist,build,*.md,*.txt,*.sql,*.sh,scripts/**,database/**,static/**,*.png,*.jpg,*.jpeg,*.gif,*.svg,*.pdf,*.zip,*.tar.gz,tests/**,test/**,*_test.py,test_*.py,*.log,*.tmp,.DS_Store,Thumbs.db}"
+      "excludeFiles": "**/*.{md,txt,sql,sh,pyc,pyo,pyd,log,tmp,png,jpg,jpeg,gif,svg,pdf,zip} **/{.git,__pycache__,.pytest_cache,.venv,venv,node_modules,.next,.cache,dist,build,scripts,tests,test,database,static} **/*test*.py"
     }
   },
   "env": {
