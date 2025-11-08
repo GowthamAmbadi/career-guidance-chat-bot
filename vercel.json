@@ -7,11 +7,6 @@
       "destination": "/api/index.py"
     }
   ],
-  "functions": {
-    "api/*.py": {
-      "excludeFiles": "**/*.{md,txt,sql,sh,pyc,pyo,pyd,log,tmp,png,jpg,jpeg,gif,svg,pdf,zip} **/{.git,__pycache__,.pytest_cache,.venv,venv,node_modules,.next,.cache,dist,build,scripts,tests,test,database,static} **/*test*.py"
-    }
-  },
   "env": {
     "PYTHONUNBUFFERED": "1",
     "PYTHONDONTWRITEBYTECODE": "1",
