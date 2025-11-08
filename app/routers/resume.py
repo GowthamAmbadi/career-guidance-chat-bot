@@ -5,6 +5,7 @@ from typing import Optional
 from app.models.schemas import ResumeParsed
 from app.services.resume_parser import parse_resume_text, parse_resume_file
 from app.clients.supabase_client import get_supabase_client
+from app.services.vector_matcher import generate_profile_embedding
 
 
 router = APIRouter(prefix="/resume", tags=["resume"])
@@ -58,12 +59,27 @@ async def parse_resume(
                         try:
                             print(f"🔍 Attempting to save profile for user_id: {user_id}")
                             sb = get_supabase_client()
+                            
+                            # Generate profile embedding
+                            profile_embedding = None
+                            try:
+                                profile_embedding = generate_profile_embedding(
+                                    name=parsed.get("name", ""),
+                                    experience=parsed.get("experience", ""),
+                                    skills=parsed.get("skills", [])
+                                )
+                                print(f"✅ Generated profile embedding ({len(profile_embedding)} dimensions)")
+                            except Exception as e:
+                                print(f"⚠️ Error generating profile embedding: {e}")
+                                # Continue without embedding - profile will be saved without it
+                            
                             profile_data = {
                                 "user_id": user_id,
                                 "name": parsed.get("name", ""),
                                 "email": parsed.get("email", "unknown@example.com"),
                                 "experience_summary": parsed.get("experience", ""),
-                                "skills": parsed.get("skills", [])
+                                "skills": parsed.get("skills", []),
+                                "profile_embedding": profile_embedding
                             }
                             print(f"   Profile data: {profile_data}")
                             result = sb.table("profiles").upsert(profile_data).execute()
@@ -162,12 +178,27 @@ async def parse_resume(
         try:
             print(f"🔍 Attempting to save profile for user_id: {user_id}")
             sb = get_supabase_client()
+            
+            # Generate profile embedding
+            profile_embedding = None
+            try:
+                profile_embedding = generate_profile_embedding(
+                    name=parsed.get("name", ""),
+                    experience=parsed.get("experience", ""),
+                    skills=parsed.get("skills", [])
+                )
+                print(f"✅ Generated profile embedding ({len(profile_embedding)} dimensions)")
+            except Exception as e:
+                print(f"⚠️ Error generating profile embedding: {e}")
+                # Continue without embedding - profile will be saved without it
+            
             profile_data = {
                 "user_id": user_id,
                 "name": parsed.get("name", ""),
                 "email": parsed.get("email", "unknown@example.com"),
                 "experience_summary": parsed.get("experience", ""),
-                "skills": parsed.get("skills", [])
+                "skills": parsed.get("skills", []),
+                "profile_embedding": profile_embedding
             }
             print(f"   Profile data: {profile_data}")
             result = sb.table("profiles").upsert(profile_data).execute()

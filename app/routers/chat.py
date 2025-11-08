@@ -73,13 +73,32 @@ async def chat(req: ChatRequest):
             # Save to profile (if user_id provided)
             if req.user_id:
                 try:
-                    result = sb.table("profiles").upsert({
+                    # Generate profile embedding
+                    profile_embedding = None
+                    try:
+                        from app.services.vector_matcher import generate_profile_embedding
+                        profile_embedding = generate_profile_embedding(
+                            name=parsed.get("name", ""),
+                            experience=parsed.get("experience", ""),
+                            skills=parsed.get("skills", [])
+                        )
+                        print(f"✅ Generated profile embedding for user_id: {req.user_id}")
+                    except Exception as e:
+                        print(f"⚠️ Error generating profile embedding: {e}")
+                        # Continue without embedding - profile will be saved without it
+                    
+                    profile_data = {
                         "user_id": req.user_id,
                         "name": parsed.get("name", ""),
                         "email": parsed.get("email", ""),
                         "experience_summary": parsed.get("experience", ""),
                         "skills": parsed.get("skills", [])
-                    }).execute()
+                    }
+                    
+                    if profile_embedding is not None:
+                        profile_data["profile_embedding"] = profile_embedding
+                    
+                    result = sb.table("profiles").upsert(profile_data).execute()
                     print(f"✅ Profile saved successfully for user_id: {req.user_id}")
                 except Exception as e:
                     import traceback
@@ -687,6 +706,25 @@ Focus on developing: {recommendation_str}"""
                 skills=profile.get("skills", [])
             )
             
+            # Try to use vector similarity if profile embedding exists
+            user_embedding = profile.get("profile_embedding")
+            vector_score = None
+            
+            if user_embedding:
+                try:
+                    from app.services.vector_matcher import calculate_profile_similarity, generate_job_embedding
+                    # Generate job embedding
+                    job_embedding = generate_job_embedding(job_description)
+                    # Calculate vector similarity (0-1 scale)
+                    vector_similarity = calculate_profile_similarity(user_embedding, job_embedding)
+                    vector_score = vector_similarity * 100  # Convert to 0-100 scale
+                    print(f"✅ Vector similarity score: {vector_score:.2f}/100")
+                except Exception as e:
+                    print(f"⚠️ Error calculating vector similarity: {e}")
+                    # Fallback to LLM-only
+                    vector_score = None
+            
+            # Get LLM analysis
             chain = get_job_fit_chain()
             fit_result = await chain.ainvoke({
                 "profile": json.dumps({
@@ -699,11 +737,19 @@ Focus on developing: {recommendation_str}"""
             })
             
             if isinstance(fit_result, dict):
-                fit_score = fit_result.get("fit_score", 0)
+                llm_score = fit_result.get("fit_score", 0)
                 rationale = fit_result.get("rationale", "")
             else:
-                fit_score = 0
+                llm_score = 0
                 rationale = "Analysis completed."
+            
+            # Hybrid approach: 60% vector, 40% LLM (if vector available)
+            if vector_score is not None:
+                fit_score = (vector_score * 0.6) + (llm_score * 0.4)
+                print(f"✅ Hybrid score: {fit_score:.2f}/100 (Vector: {vector_score:.2f} × 0.6 + LLM: {llm_score:.2f} × 0.4)")
+            else:
+                fit_score = llm_score
+                print(f"✅ LLM-only score: {fit_score:.2f}/100")
             
             # Check for domain mismatch in rationale or job description
             # If it's a domain mismatch (ML → Cyber Security, ML → Web Dev, etc.), cap at 40
@@ -731,17 +777,83 @@ Focus on developing: {recommendation_str}"""
             # Add emoji based on score
             emoji = "🟢" if fit_score >= 70 else "🟡" if fit_score >= 50 else "🔴"
             
-            response_text = f"""📋 **Job Fit Analysis**
-
-{emoji} **Fit Score: {fit_score}/100**
-
-**Rationale:**
-{rationale}
-
-💡 **Insights:**
-{'Excellent match! You\'re well-qualified for this role.' if fit_score >= 70 else 
-'Good potential match. Consider developing the missing skills.' if fit_score >= 50 else 
-'Some gaps exist. Focus on building required skills before applying.'}"""
+            # Parse rationale to extract key information for better formatting
+            matched_skills = []
+            missing_skills = []
+            domain_info = ""
+            
+            # Extract all matched skills (including "Matched:" and "Also matched:")
+            # Pattern to find all "Matched:" or "Also matched:" sections
+            matched_sections = re.findall(r'(?:Matched|Also matched)[:\s]+([^(]+?)(?:\s*\(|\s*\.|Missing|Domain|Base score|Final)', rationale, re.IGNORECASE)
+            for section in matched_sections:
+                # Clean and split skills from each section
+                skills = [s.strip() for s in re.split(r'[,;]', section) if s.strip() and not s.strip().startswith('(')]
+                matched_skills.extend(skills)
+            
+            # Remove duplicates while preserving order
+            seen = set()
+            matched_skills = [s for s in matched_skills if s not in seen and not seen.add(s)]
+            
+            # Extract missing skills (look for "Missing:" pattern)
+            missing_match = re.search(r'Missing[:\s]+([^.]+?)(?:\.|Domain|Base score|Final)', rationale, re.IGNORECASE)
+            if missing_match:
+                missing_text = missing_match.group(1)
+                missing_skills = [s.strip() for s in re.split(r'[,;]', missing_text) if s.strip()]
+            
+            # Extract domain alignment info
+            domain_match = re.search(r'Domain[^:]*:\s*([^.]+?)(?:\.|Base score|Final)', rationale, re.IGNORECASE)
+            if domain_match:
+                domain_info = domain_match.group(1).strip()
+            
+            # Format response with better structure
+            response_parts = [
+                f"📋 **Job Fit Analysis**",
+                "",
+                f"{emoji} **Fit Score: {fit_score}/100**",
+                ""
+            ]
+            
+            # Add matched skills section
+            if matched_skills:
+                response_parts.append("✅ **Skills You Have:**")
+                for skill in matched_skills[:10]:  # Limit to first 10
+                    response_parts.append(f"• {skill}")
+                if len(matched_skills) > 10:
+                    response_parts.append(f"• ... and {len(matched_skills) - 10} more")
+                response_parts.append("")
+            
+            # Add missing skills section
+            if missing_skills:
+                response_parts.append("❌ **Skills You Need to Develop:**")
+                for skill in missing_skills[:10]:  # Limit to first 10
+                    response_parts.append(f"• {skill}")
+                if len(missing_skills) > 10:
+                    response_parts.append(f"• ... and {len(missing_skills) - 10} more")
+                response_parts.append("")
+            
+            # Add domain alignment if available
+            if domain_info and "align" in domain_info.lower():
+                response_parts.append(f"🎯 **Domain Match:** {domain_info}")
+                response_parts.append("")
+            
+            # Add insights
+            if fit_score >= 70:
+                insight = "Excellent match! You're well-qualified for this role."
+            elif fit_score >= 50:
+                insight = "Good potential match. Consider developing the missing skills to strengthen your application."
+            else:
+                insight = "Some gaps exist. Focus on building the required skills before applying."
+            
+            response_parts.append(f"💡 **Insights:**")
+            response_parts.append(insight)
+            
+            # If we couldn't parse skills, fallback to showing rationale
+            if not matched_skills and not missing_skills:
+                response_parts.append("")
+                response_parts.append("**Detailed Analysis:**")
+                response_parts.append(rationale)
+            
+            response_text = "\n".join(response_parts)
             
             return ChatResponse(response=response_text, sources=None)
         
