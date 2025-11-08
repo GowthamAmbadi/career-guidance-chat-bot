@@ -41,14 +41,14 @@ uv pip install --system --no-cache \
     numpy==1.26.4 \
     scikit-learn==1.5.2
 
-# Install CPU-only PyTorch (much smaller ~200MB vs ~1.5GB for full PyTorch)
-# Only install torch core, skip torchvision and torchaudio to save space
-echo "Installing CPU-only PyTorch (minimal installation for size optimization)..."
+# Install CPU-only PyTorch (use older, smaller version for size optimization)
+# Version 2.0.1 is smaller than 2.1.0
+echo "Installing CPU-only PyTorch (minimal version 2.0.1 for size optimization)..."
 uv pip install --system --no-cache \
-    torch==2.1.0+cpu \
+    torch==2.0.1+cpu \
     --index-url https://download.pytorch.org/whl/cpu || \
 uv pip install --system --no-cache \
-    torch==2.1.0+cpu \
+    torch==2.0.1+cpu \
     --index-url https://download.pytorch.org/whl/cpu
 
 # Install sentence-transformers last (most memory intensive) - only binary wheels
@@ -96,8 +96,8 @@ find /usr/local/lib/python3.12/site-packages -name "*example*.py" -delete 2>/dev
 echo "Removing Jupyter notebook files..."
 find /usr/local/lib/python3.12/site-packages -name "*.ipynb" -delete 2>/dev/null || true
 
-# Aggressive PyTorch cleanup
-echo "Removing unnecessary PyTorch files..."
+# Aggressive PyTorch cleanup - remove as much as possible
+echo "Removing unnecessary PyTorch files (aggressive cleanup)..."
 if [ -d "/usr/local/lib/python3.12/site-packages/torch" ]; then
     # Remove CUDA files (shouldn't exist in CPU build, but just in case)
     find /usr/local/lib/python3.12/site-packages/torch -name "cu*" -type f -delete 2>/dev/null || true
@@ -110,16 +110,36 @@ if [ -d "/usr/local/lib/python3.12/site-packages/torch" ]; then
     find /usr/local/lib/python3.12/site-packages/torch -name "*test*.py" -delete 2>/dev/null || true
     # Remove example files
     find /usr/local/lib/python3.12/site-packages/torch -type d -name "examples" -exec rm -rf {} + 2>/dev/null || true
+    # Remove unnecessary torch modules to save space
+    # Keep essential modules: nn, optim, functional, tensor operations, autograd, multiprocessing
+    # Remove only clearly unnecessary: distributed, jit, quantization, onnx, profiler, cuda
+    for module in distributed jit quantization onnx profiler cuda; do
+        find /usr/local/lib/python3.12/site-packages/torch -type d -name "$module" -exec rm -rf {} + 2>/dev/null || true
+    done
+    # Remove large binary files that aren't essential
+    find /usr/local/lib/python3.12/site-packages/torch/lib -name "*.a" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/torch/lib -name "libcudart*" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/torch/lib -name "libcublas*" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/torch/lib -name "libcurand*" -delete 2>/dev/null || true
 fi
 
-# Remove transformers unnecessary files
-echo "Removing transformers unnecessary files..."
+# Remove transformers unnecessary files (aggressive cleanup)
+echo "Removing transformers unnecessary files (aggressive cleanup)..."
 if [ -d "/usr/local/lib/python3.12/site-packages/transformers" ]; then
-    # Remove test files only (keep model code and tokenizers)
+    # Remove test files
     find /usr/local/lib/python3.12/site-packages/transformers -name "*test*.py" -delete 2>/dev/null || true
     find /usr/local/lib/python3.12/site-packages/transformers -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true
     # Remove example files
     find /usr/local/lib/python3.12/site-packages/transformers -type d -name "examples" -exec rm -rf {} + 2>/dev/null || true
+    # Remove benchmarking and optimization tools
+    find /usr/local/lib/python3.12/site-packages/transformers -type d -name "benchmark" -exec rm -rf {} + 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/transformers -name "*benchmark*" -delete 2>/dev/null || true
+    # Remove ONNX and other export tools
+    find /usr/local/lib/python3.12/site-packages/transformers -type d -name "onnx" -exec rm -rf {} + 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/transformers -name "*onnx*" -delete 2>/dev/null || true
+    # Remove model cards and documentation
+    find /usr/local/lib/python3.12/site-packages/transformers -name "*.md" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/transformers -name "*.rst" -delete 2>/dev/null || true
 fi
 
 # Remove sentence-transformers unnecessary files
@@ -130,12 +150,31 @@ if [ -d "/usr/local/lib/python3.12/site-packages/sentence_transformers" ]; then
     find /usr/local/lib/python3.12/site-packages/sentence_transformers -name "*example*" -delete 2>/dev/null || true
 fi
 
-# Remove scikit-learn unnecessary files
-echo "Removing scikit-learn unnecessary files..."
+# Remove scikit-learn unnecessary files (aggressive cleanup)
+echo "Removing scikit-learn unnecessary files (aggressive cleanup)..."
 if [ -d "/usr/local/lib/python3.12/site-packages/sklearn" ]; then
     # Remove datasets (if any)
     find /usr/local/lib/python3.12/site-packages/sklearn -type d -name "datasets" -exec rm -rf {} + 2>/dev/null || true
     find /usr/local/lib/python3.12/site-packages/sklearn -type d -name "data" -exec rm -rf {} + 2>/dev/null || true
+    # Remove example data files
+    find /usr/local/lib/python3.12/site-packages/sklearn -name "*.csv" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/sklearn -name "*.arff" -delete 2>/dev/null || true
+    # Remove documentation
+    find /usr/local/lib/python3.12/site-packages/sklearn -name "*.md" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/sklearn -name "*.rst" -delete 2>/dev/null || true
+fi
+
+# Remove numpy unnecessary files
+echo "Removing numpy unnecessary files..."
+if [ -d "/usr/local/lib/python3.12/site-packages/numpy" ]; then
+    # Remove test files
+    find /usr/local/lib/python3.12/site-packages/numpy -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/numpy -name "*test*.py" -delete 2>/dev/null || true
+    # Remove f2py (Fortran compiler interface, not needed)
+    find /usr/local/lib/python3.12/site-packages/numpy -type d -name "f2py" -exec rm -rf {} + 2>/dev/null || true
+    # Remove documentation
+    find /usr/local/lib/python3.12/site-packages/numpy -name "*.md" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/numpy -name "*.rst" -delete 2>/dev/null || true
 fi
 
 # Remove langchain unnecessary files
@@ -149,11 +188,17 @@ fi
 echo "Removing .git directories..."
 find /usr/local/lib/python3.12/site-packages -type d -name ".git" -exec rm -rf {} + 2>/dev/null || true
 
-# Remove any large data files
-echo "Removing large data files..."
-find /usr/local/lib/python3.12/site-packages -name "*.pkl" -size +1M -delete 2>/dev/null || true
+# Remove any large data files (more aggressive)
+echo "Removing large data files (aggressive cleanup)..."
+# Remove large pickle files (keep small ones that might be needed for library functionality)
+find /usr/local/lib/python3.12/site-packages -name "*.pkl" -size +500k -delete 2>/dev/null || true
 find /usr/local/lib/python3.12/site-packages -name "*.h5" -delete 2>/dev/null || true
 find /usr/local/lib/python3.12/site-packages -name "*.hdf5" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.npz" -size +100k -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.npy" -size +100k -delete 2>/dev/null || true
+# Remove model weights that might be bundled (models download on demand)
+find /usr/local/lib/python3.12/site-packages -name "*.bin" -size +1M -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.safetensors" -size +1M -delete 2>/dev/null || true
 
 # Remove unnecessary locale files (keep only en_US if needed)
 echo "Removing unnecessary locale files..."
