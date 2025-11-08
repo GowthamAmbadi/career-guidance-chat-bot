@@ -204,12 +204,148 @@ find /usr/local/lib/python3.12/site-packages -name "*.safetensors" -size +1M -de
 echo "Removing unnecessary locale files..."
 find /usr/local/lib/python3.12/site-packages -type d -name "locale" -exec find {} -mindepth 2 -maxdepth 2 ! -name "en_US" -type d -exec rm -rf {} + \; 2>/dev/null || true
 
-# Final cleanup: remove empty directories
-echo "Removing empty directories..."
+# EXTREME CLEANUP: Remove ALL non-essential files from ALL packages
+echo "=========================================="
+echo "EXTREME CLEANUP: Removing ALL non-essential files..."
+echo "=========================================="
+
+# Remove ALL documentation, examples, tests from EVERY package
+echo "Removing ALL documentation, examples, tests..."
+find /usr/local/lib/python3.12/site-packages -type f \( -name "*.md" -o -name "*.rst" -o -name "*.txt" ! -name "METADATA" ! -name "LICENSE*" -o -name "*.html" -o -name "*.json" ! -name "*.dist-info/METADATA" \) -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -type d \( -name "tests" -o -name "test" -o -name "examples" -o -name "example" -o -name "docs" -o -name "doc" -o -name "benchmarks" -o -name "benchmark" \) -exec rm -rf {} + 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*test*.py" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*example*.py" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*benchmark*.py" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.ipynb" -delete 2>/dev/null || true
+
+# Remove ALL data files, models, and large binaries
+echo "Removing ALL data files and large binaries..."
+find /usr/local/lib/python3.12/site-packages -name "*.pkl" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.h5" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.hdf5" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.npz" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.npy" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.bin" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.safetensors" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.onnx" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.tflite" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.pb" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.csv" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.tsv" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.json" ! -path "*/dist-info/*" -delete 2>/dev/null || true
+
+# Remove ALL static libraries and unnecessary binaries
+echo "Removing ALL static libraries and unnecessary binaries..."
+find /usr/local/lib/python3.12/site-packages -name "*.a" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.lib" -delete 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -name "*.so.*" ! -name "*.so" -delete 2>/dev/null || true
+
+# Aggressive PyTorch stripping - remove everything except core functionality
+echo "EXTREME PyTorch cleanup - keeping only absolute essentials..."
+if [ -d "/usr/local/lib/python3.12/site-packages/torch" ]; then
+    # Remove ONLY clearly unnecessary directories (keep core C extensions)
+    for dir in distributed jit quantization onnx profiler cuda amp hub; do
+        rm -rf /usr/local/lib/python3.12/site-packages/torch/$dir 2>/dev/null || true
+    done
+    # Remove ALL test and example files
+    find /usr/local/lib/python3.12/site-packages/torch -type d \( -name "test" -o -name "tests" -o -name "examples" -o -name "example" \) -exec rm -rf {} + 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/torch -name "*test*" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/torch -name "*example*" -delete 2>/dev/null || true
+    # Remove ALL documentation
+    find /usr/local/lib/python3.12/site-packages/torch -name "*.md" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/torch -name "*.rst" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/torch -name "*.txt" ! -name "METADATA" -delete 2>/dev/null || true
+    # Remove ALL static libraries
+    find /usr/local/lib/python3.12/site-packages/torch/lib -name "*.a" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/torch/lib -name "libcuda*" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/torch/lib -name "libcudnn*" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/torch/lib -name "libcurand*" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/torch/lib -name "libcublas*" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/torch/lib -name "libcusparse*" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/torch/lib -name "libcusolver*" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/torch/lib -name "libnvrtc*" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/torch/lib -name "libnvToolsExt*" -delete 2>/dev/null || true
+fi
+
+# Aggressive transformers stripping
+echo "EXTREME transformers cleanup..."
+if [ -d "/usr/local/lib/python3.12/site-packages/transformers" ]; then
+    # Remove ALL unnecessary subdirectories
+    for dir in benchmarks examples tests test utils; do
+        rm -rf /usr/local/lib/python3.12/site-packages/transformers/$dir 2>/dev/null || true
+    done
+    # Remove ALL model-specific directories we don't use (keep only tokenizers and basic models)
+    # This is risky but necessary - we'll keep only what sentence-transformers needs
+    find /usr/local/lib/python3.12/site-packages/transformers/models -type d -mindepth 1 -maxdepth 1 ! -name "auto" ! -name "bert" ! -name "roberta" ! -name "distilbert" ! -name "sentence_transformers" -exec rm -rf {} + 2>/dev/null || true
+    # Remove ALL documentation
+    find /usr/local/lib/python3.12/site-packages/transformers -name "*.md" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/transformers -name "*.rst" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/transformers -name "*.txt" ! -name "METADATA" -delete 2>/dev/null || true
+fi
+
+# Aggressive sentence-transformers stripping
+echo "EXTREME sentence-transformers cleanup..."
+if [ -d "/usr/local/lib/python3.12/site-packages/sentence_transformers" ]; then
+    # Remove ALL examples and tests
+    rm -rf /usr/local/lib/python3.12/site-packages/sentence_transformers/examples 2>/dev/null || true
+    rm -rf /usr/local/lib/python3.12/site-packages/sentence_transformers/tests 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/sentence_transformers -name "*test*" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/sentence_transformers -name "*example*" -delete 2>/dev/null || true
+    # Remove ALL documentation
+    find /usr/local/lib/python3.12/site-packages/sentence_transformers -name "*.md" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/sentence_transformers -name "*.rst" -delete 2>/dev/null || true
+fi
+
+# Aggressive scikit-learn stripping
+echo "EXTREME scikit-learn cleanup..."
+if [ -d "/usr/local/lib/python3.12/site-packages/sklearn" ]; then
+    # Remove ALL datasets and examples
+    rm -rf /usr/local/lib/python3.12/site-packages/sklearn/datasets 2>/dev/null || true
+    rm -rf /usr/local/lib/python3.12/site-packages/sklearn/examples 2>/dev/null || true
+    rm -rf /usr/local/lib/python3.12/site-packages/sklearn/tests 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/sklearn -name "*.md" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/sklearn -name "*.rst" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/sklearn -name "*.csv" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/sklearn -name "*.arff" -delete 2>/dev/null || true
+fi
+
+# Aggressive numpy stripping
+echo "EXTREME numpy cleanup..."
+if [ -d "/usr/local/lib/python3.12/site-packages/numpy" ]; then
+    rm -rf /usr/local/lib/python3.12/site-packages/numpy/tests 2>/dev/null || true
+    rm -rf /usr/local/lib/python3.12/site-packages/numpy/f2py 2>/dev/null || true
+    rm -rf /usr/local/lib/python3.12/site-packages/numpy/doc 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/numpy -name "*.md" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/numpy -name "*.rst" -delete 2>/dev/null || true
+fi
+
+# Aggressive langchain stripping
+echo "EXTREME langchain cleanup..."
+if [ -d "/usr/local/lib/python3.12/site-packages/langchain" ]; then
+    find /usr/local/lib/python3.12/site-packages/langchain -type d \( -name "examples" -o -name "tests" -o -name "test" \) -exec rm -rf {} + 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/langchain -name "*.md" -delete 2>/dev/null || true
+    find /usr/local/lib/python3.12/site-packages/langchain -name "*.rst" -delete 2>/dev/null || true
+fi
+
+# Remove ALL locale files except en_US
+echo "Removing ALL non-English locales..."
+find /usr/local/lib/python3.12/site-packages -type d -name "locale" -exec find {} -mindepth 2 -maxdepth 2 ! -name "en_US" -type d -exec rm -rf {} + \; 2>/dev/null || true
+
+# Remove ALL .git directories
+echo "Removing ALL .git directories..."
+find /usr/local/lib/python3.12/site-packages -type d -name ".git" -exec rm -rf {} + 2>/dev/null || true
+find /usr/local/lib/python3.12/site-packages -type d -name ".github" -exec rm -rf {} + 2>/dev/null || true
+
+# Remove ALL empty directories
+echo "Removing ALL empty directories..."
 find /usr/local/lib/python3.12/site-packages -type d -empty -delete 2>/dev/null || true
 
+# Final pass: Remove any remaining large files
+echo "Final pass: Removing any remaining large files..."
+find /usr/local/lib/python3.12/site-packages -type f -size +500k ! -name "*.so" -delete 2>/dev/null || true
+
 echo "=========================================="
-echo "Cleanup complete. Bundle size optimized."
+echo "EXTREME cleanup complete. Bundle size minimized."
 echo "=========================================="
 
 echo ""
