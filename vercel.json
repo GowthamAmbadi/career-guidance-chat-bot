@@ -3,7 +3,7 @@
   "installCommand": "echo 'Skipping install, using buildCommand'",
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!static).*)",
       "destination": "/api/index.py"
     }
   ],

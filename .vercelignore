@@ -16,14 +16,14 @@ scripts/
 build.sh
 optimize_bundle.sh
 
-# Static assets (should be served separately)
-static/
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.svg
-*.pdf
+# Static assets - needed for FastAPI to serve frontend
+# static/  # Commented out - needed for deployment
+# *.png    # Commented out - needed for logo
+# *.jpg    # Commented out - needed for images
+# *.jpeg   # Commented out - needed for images
+# *.gif    # Commented out - needed for images
+# *.svg    # Commented out - needed for images
+# *.pdf    # Commented out - needed for resume uploads
 
 # Development files
 .env.local
