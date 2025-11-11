@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     supabase_jwt_secret: str | None = Field(None, alias="SUPABASE_JWT_SECRET")
     database_url: str | None = Field(None, alias="DATABASE_URL")
 
-    gemini_api_key: str = Field(..., alias="GEMINI_API_KEY")
+    gemini_api_key: str | None = Field(None, alias="GEMINI_API_KEY")  # Deprecated, kept for backward compatibility
     openai_api_key: str = Field(..., alias="OPENAI_API_KEY")
 
     cors_origins: str | None = Field("*", alias="CORS_ORIGINS")

@@ -17,7 +17,7 @@ FastAPI + LangChain + Supabase (pgvector) backend for AI career guidance chatbot
 
 - Python 3.11+ 
 - Supabase account with pgvector enabled
-- Google Gemini API key
+- OpenAI API key
 
 ### 2. Setup
 
@@ -33,9 +33,6 @@ source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Download NLTK data
-python -c "import nltk; nltk.download('stopwords'); nltk.download('punkt'); nltk.download('averaged_perceptron_tagger')"
 ```
 
 ### 3. Environment Setup
@@ -48,7 +45,7 @@ SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 SUPABASE_JWT_SECRET=your_jwt_secret
 DATABASE_URL=your_database_url  # Optional, for direct DB access
-GEMINI_API_KEY=your_gemini_api_key
+OPENAI_API_KEY=your_openai_api_key
 CORS_ORIGINS=http://localhost:3000
 LOG_LEVEL=info
 ```
@@ -148,11 +145,11 @@ API docs available at: `http://localhost:8000/docs`
 
 - **FastAPI** - Web framework
 - **LangChain** - LLM orchestration
-- **Google Gemini** - LLM for generation
+- **OpenAI GPT** - LLM for generation (gpt-4o-mini)
+- **OpenAI** - Embeddings API for vector embeddings
 - **Supabase** - Database (PostgreSQL + pgvector)
-- **sentence-transformers** - Embeddings for RAG
-- **pyresparser** - Resume parsing
-- **spacy** - NLP for resume parsing
+- **pdfplumber/PyPDF2** - PDF parsing for resumes
+- **python-docx** - DOCX parsing for resumes
 
 ## Notes
 

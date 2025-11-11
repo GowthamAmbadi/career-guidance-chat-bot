@@ -6,7 +6,7 @@ from app.llm.embeddings import embed_texts
 from app.clients.supabase_client import get_supabase_client
 from app.llm.gemini_client import get_gemini_llm, create_career_coach_prompt
 from app.utils.text_utils import strip_html_tags
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
 
 def search_career_knowledge(query: str, top_k: int = 5) -> List[Dict[str, Any]]:

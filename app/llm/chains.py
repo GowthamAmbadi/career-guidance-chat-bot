@@ -2,7 +2,7 @@
 LangChain chains for various career guidance tasks.
 """
 from langchain_core.output_parsers import JsonOutputParser
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 from typing import Dict, Any, List
 from app.llm.gemini_client import (
     get_gemini_llm,

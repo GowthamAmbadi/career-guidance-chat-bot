@@ -9,7 +9,7 @@ from app.llm.chains import get_career_recommendation_chain, get_skill_gap_chain,
 from app.clients.supabase_client import get_supabase_client
 from app.models.schemas import Profile
 from app.utils.text_utils import strip_html_tags, clean_job_description
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 import json
 import re
 import html

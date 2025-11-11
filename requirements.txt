@@ -10,7 +10,7 @@ email-validator==2.3.0
  # LangChain + LLMs
 langchain==0.3.7
 langchain-community==0.3.7
-langchain-google-genai==2.0.1
+langchain-openai>=0.2.0
 
  # Embeddings
  openai>=1.0.0

@@ -1,14 +1,13 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.prompts import ChatPromptTemplate
-from langchain.chains import LLMChain
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
 from app.config import settings
 
 
-def get_gemini_llm(model_name: str = "gemini-2.0-flash", temperature: float = 0.7) -> ChatGoogleGenerativeAI:
-    """Get configured Gemini LLM instance."""
-    return ChatGoogleGenerativeAI(
+def get_gemini_llm(model_name: str = "gpt-4o-mini", temperature: float = 0.7) -> ChatOpenAI:
+    """Get configured OpenAI LLM instance (kept function name for compatibility)."""
+    return ChatOpenAI(
         model=model_name,
-        google_api_key=settings.gemini_api_key,
+        openai_api_key=settings.openai_api_key,
         temperature=temperature,
     )
 
