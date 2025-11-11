@@ -711,7 +711,7 @@
                 console.log('📤 Sending chat request with user_id:', currentUserId);
                 console.log('📧 Email stored:', localStorage.getItem('careerguidance_user_email'));
                 
-                const response = await fetch('http://localhost:8000/chat/', {
+                const response = await fetch('/chat/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -780,7 +780,7 @@
                 
             } catch (error) {
                 hideTyping();
-                addMessage('assistant', `❌ Error: ${error.message}. Please make sure the API server is running at http://localhost:8000`);
+                addMessage('assistant', `❌ Error: ${error.message}. Please check your connection and try again.`);
             } finally {
                 sendButton.disabled = false;
                 messageInput.focus();
@@ -831,7 +831,7 @@
                 formData.append('file', file);
                 formData.append('user_id', currentUserId);
                 
-                const response = await fetch('http://localhost:8000/resume/parse', {
+                const response = await fetch('/resume/parse', {
                     method: 'POST',
                     body: formData
                 });

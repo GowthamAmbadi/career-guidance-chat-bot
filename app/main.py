@@ -18,8 +18,21 @@ def create_app() -> FastAPI:
     )
 
     # Serve static files (frontend) - MUST be before routers to avoid conflicts
-    static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
-    if os.path.exists(static_dir):
+    # Try multiple paths for different deployment environments
+    possible_static_dirs = [
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "static"),
+        os.path.join(os.getcwd(), "static"),
+        "static",
+        os.path.abspath("static")
+    ]
+    
+    static_dir = None
+    for dir_path in possible_static_dirs:
+        if os.path.exists(dir_path):
+            static_dir = dir_path
+            break
+    
+    if static_dir:
         app.mount("/static", StaticFiles(directory=static_dir), name="static")
         
         # Serve chat UI at root
@@ -29,6 +42,11 @@ def create_app() -> FastAPI:
             if os.path.exists(index_path):
                 return FileResponse(index_path)
             return {"service": "Career Guidance API", "chat_ui": "Visit /docs for API documentation"}
+    else:
+        # Fallback if static directory not found
+        @app.get("/", include_in_schema=False)
+        def read_root():
+            return {"service": "Career Guidance API", "chat_ui": "Visit /docs for API documentation", "note": "Static files not found"}
     
     register_routers(app)
 
