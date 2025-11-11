@@ -1,38 +1,46 @@
-from sentence_transformers import SentenceTransformer
+from openai import OpenAI
+from app.config import settings
 from functools import lru_cache
-import os
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 @lru_cache(maxsize=1)
-def get_embedding_model(model_name: str = "all-MiniLM-L6-v2") -> SentenceTransformer:
+def get_openai_client() -> OpenAI:
+    """Get cached OpenAI client instance."""
+    return OpenAI(api_key=settings.openai_api_key)
+
+
+def embed_texts(texts: list[str], model_name: str = "text-embedding-3-small") -> list[list[float]]:
     """
-    Get embedding model with optimized memory usage.
-    Model is loaded lazily on first use, not during import.
-    Uses environment variables for cache directories to reduce build memory.
-    """
-    # Use cache directory from environment variable to reduce memory usage during build
-    cache_folder = os.getenv("SENTENCE_TRANSFORMERS_HOME", "/tmp/st_cache")
+    Generate embeddings using OpenAI API.
     
-    # Set device to CPU explicitly to avoid GPU memory issues during build
-    device = os.getenv("SENTENCE_TRANSFORMERS_DEVICE", "cpu")
+    Args:
+        texts: List of text strings to embed
+        model_name: OpenAI embedding model name (default: text-embedding-3-small)
+    
+    Returns:
+        List of normalized embedding vectors (list of lists of floats)
+    """
+    client = get_openai_client()
     
     try:
-        # Load model with optimized settings
-        model = SentenceTransformer(
-            model_name,
-            cache_folder=cache_folder,
-            device=device
+        response = client.embeddings.create(
+            model=model_name,
+            input=texts
         )
-        logger.info(f"Loaded embedding model: {model_name} with cache: {cache_folder}")
-        return model
+        
+        # Extract embeddings from response
+        # OpenAI embeddings are already normalized
+        embeddings = [data.embedding for data in response.data]
+        return embeddings
     except Exception as e:
-        logger.error(f"Error loading embedding model {model_name}: {str(e)}")
-        raise
+        raise Exception(f"OpenAI embedding API error: {e}")
 
 
-def embed_texts(texts: list[str], model_name: str = "all-MiniLM-L6-v2") -> list[list[float]]:
-    model = get_embedding_model(model_name)
-    return model.encode(texts, normalize_embeddings=True).tolist()
+# Keep get_embedding_model for backward compatibility (if needed)
+# But it's not used anymore since we use OpenAI API directly
+def get_embedding_model(model_name: str = "text-embedding-3-small") -> None:
+    """
+    Deprecated: This function is kept for backward compatibility.
+    Embeddings are now generated via OpenAI API directly.
+    """
+    return None

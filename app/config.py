@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     database_url: str | None = Field(None, alias="DATABASE_URL")
 
     gemini_api_key: str = Field(..., alias="GEMINI_API_KEY")
+    openai_api_key: str = Field(..., alias="OPENAI_API_KEY")
 
     cors_origins: str | None = Field("*", alias="CORS_ORIGINS")
     log_level: str | None = Field("info", alias="LOG_LEVEL")
