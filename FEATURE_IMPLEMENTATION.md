@@ -12,7 +12,7 @@ This document shows where each feature from `CAREER GUIDANCE.md` is implemented.
 **Implementation:**
 - **Router:** ```9:53:app/routers/resume.py```
 - **Service Logic:** ```8:56:app/services/resume_parser.py```
-- **Uses:** LLM (Gemini) + keyword matching for skill extraction
+- **Uses:** LLM (OpenAI) + keyword matching for skill extraction
 - **Returns:** `{name, email, experience, skills}`
 
 **How to use:**
@@ -31,7 +31,7 @@ Body (form-data): resume_text="..." OR file=upload
 **Implementation:**
 - **Router:** ```10:58:app/routers/reco.py```
 - **LLM Chain:** ```14:26:app/llm/chains.py```
-- **Uses:** User profile (skills + experience) → Gemini LLM → Career recommendations
+- **Uses:** User profile (skills + experience) → OpenAI LLM → Career recommendations
 - **Returns:** `{careers: [{title, description, salary_range, outlook}]}`
 
 **How to use:**
@@ -49,7 +49,7 @@ GET /recommend/careers?user_id=your-user-id
 **Implementation:**
 - **Router:** ```10:42:app/routers/analysis.py```
 - **LLM Chain:** ```29:34:app/llm/chains.py```
-- **Uses:** Semantic comparison via Gemini LLM (not just keyword matching)
+- **Uses:** Semantic comparison via OpenAI LLM (not just keyword matching)
 - **Returns:** `{matched: [...], gap: [...]}`
 
 **How to use:**
@@ -71,7 +71,7 @@ Body: {
 **Implementation:**
 - **Router:** ```45:82:app/routers/analysis.py```
 - **LLM Chain:** ```37:42:app/llm/chains.py```
-- **Uses:** Gemini LLM to analyze profile vs job description
+- **Uses:** OpenAI LLM to analyze profile vs job description
 - **Returns:** `{fit_score: 0-100, rationale: "..."}`
 
 **How to use:**
@@ -117,10 +117,10 @@ GET /goals/?user_id=...
 - **Router:** ```13:37:app/routers/rag.py```
 - **Service:** ```11:130:app/services/rag_service.py```
 - **Flow:**
-  1. Query → Embedding (sentence-transformers)
+  1. Query → Embedding (OpenAI Embeddings API)
   2. Vector search in `career_data` table (pgvector)
   3. Retrieve top 5 relevant documents
-  4. Generate answer with Gemini LLM using retrieved context
+  4. Generate answer with OpenAI LLM using retrieved context
 - **Returns:** `{answer: "...", sources: [...]}`
 
 **How to use:**
@@ -159,8 +159,8 @@ Body: {"query": "What is the job outlook for Data Scientists?"}
 
 ## Supporting Services
 
-- **Embeddings:** `app/llm/embeddings.py` - sentence-transformers for RAG
-- **Gemini LLM:** `app/llm/gemini_client.py` - LLM configuration
+- **Embeddings:** `app/llm/embeddings.py` - OpenAI Embeddings API for RAG
+- **OpenAI LLM:** `app/llm/llm_client.py` - LLM configuration
 - **Chains:** `app/llm/chains.py` - LangChain chains for each feature
 - **Supabase Client:** `app/clients/supabase_client.py` - Database connection
 

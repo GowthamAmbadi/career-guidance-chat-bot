@@ -4,7 +4,7 @@ RAG (Retrieval-Augmented Generation) service for career knowledge base.
 from typing import List, Dict, Any
 from app.llm.embeddings import embed_texts
 from app.clients.supabase_client import get_supabase_client
-from app.llm.gemini_client import get_gemini_llm, create_career_coach_prompt
+from app.llm.llm_client import get_openai_llm, create_career_coach_prompt
 from app.utils.text_utils import strip_html_tags
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -144,7 +144,7 @@ async def query_career_knowledge(query: str, top_k: int = 5) -> Dict[str, Any]:
     context = "\n---\n".join(context_parts)
     
     # 3. Generate answer using LLM with context
-    llm = get_gemini_llm(temperature=0.3)
+    llm = get_openai_llm(temperature=0.3)
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", """You are 'Career Guidance', an expert AI Career Guidance Coach for the Indian job market. 

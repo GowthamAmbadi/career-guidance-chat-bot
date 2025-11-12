@@ -2,6 +2,7 @@
 Utility functions for building profile text for embeddings.
 """
 from typing import List
+import json
 
 
 def build_profile_text(name: str, experience: str, skills: List[str]) -> str:
@@ -30,4 +31,24 @@ def build_profile_text(name: str, experience: str, skills: List[str]) -> str:
         profile_parts.append(f"Skills: {skills_text}")
     
     return "\n".join(profile_parts)
+
+
+def format_skill_embeddings_for_postgres(embeddings: List[List[float]]) -> List[List[float]]:
+    """
+    Format skill embeddings for PostgreSQL vector array type.
+    
+    Returns the raw list of lists. The caller should use RPC to update
+    via the update_skills_embeddings function if direct upsert fails.
+    
+    Args:
+        embeddings: List of embedding vectors (each is a list of floats)
+    
+    Returns:
+        List of lists (raw format)
+    """
+    if not embeddings:
+        return None
+    
+    # Return raw list of lists
+    return embeddings
 

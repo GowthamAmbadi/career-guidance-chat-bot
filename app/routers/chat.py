@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
-from app.llm.gemini_client import get_gemini_llm
+from app.llm.llm_client import get_openai_llm
 from app.services.rag_service import query_career_knowledge
 from app.services.intent_detector import detect_intent
 from app.services.resume_parser import parse_resume_text
 from app.llm.chains import get_career_recommendation_chain, get_skill_gap_chain, get_job_fit_chain
+from app.services.vector_matcher import generate_skill_embeddings, match_skills_semantic
 from app.clients.supabase_client import get_supabase_client
 from app.models.schemas import Profile
 from app.utils.text_utils import strip_html_tags, clean_job_description
@@ -62,7 +63,7 @@ async def chat(req: ChatRequest):
     extracted_data = intent_result["extracted_data"]
     
     sb = get_supabase_client()
-    llm = get_gemini_llm(temperature=0.7)
+    llm = get_openai_llm(temperature=0.7)
     
     try:
         # Route to appropriate feature based on intent
@@ -384,6 +385,7 @@ CRITICAL FORMATTING RULES:
                 )
             
             user_skills = res.data[0].get("skills", []) or []
+            user_skill_embeddings = res.data[0].get("skills_embeddings") or []
             target_career = extracted_data.get("target_career", "")
             
             # Check if user is asking about previous job description from conversation
@@ -440,9 +442,21 @@ CRITICAL FORMATTING RULES:
                             'job description', 'job posting', 'skills required', 'required qualifications', 
                             'we are looking', 'we are seeking', 'experience:', 'full-time', 'part-time', 
                             'java developer', 'responsibilities', 'technical requirements', 'spring boot',
-                            'microservices', 'employment type', 'role category'
+                            'microservices', 'employment type', 'role category', 'greetings from',
+                            'job title:', 'venue:', 'date:', 'time:', 'experience range:', 'role:',
+                            'industry type:', 'department:', 'employment type:', 'role category:',
+                            'minimum qualification', 'education', 'key skills', 'preferred skills',
+                            'must have', 'should have', 'good to have', 'technical and professional requirements',
+                            'about the role', 'about this position', 'position summary', 'role overview',
+                            'company overview', 'location:', 'salary range', 'benefits package'
                         ]
-                        if any(keyword in msg_text for keyword in jd_keywords) and len(msg_content) > 150:
+                        # More lenient: accept shorter messages if they have strong JD indicators
+                        has_strong_jd_keywords = any(keyword in msg_text for keyword in [
+                            'job description', 'job posting', 'we are looking', 'we are seeking',
+                            'about the role', 'position summary', 'role overview', 'employment type'
+                        ])
+                        is_long_enough = len(msg_content) > 100  # Reduced from 150
+                        if (has_strong_jd_keywords and len(msg_content) > 50) or (any(keyword in msg_text for keyword in jd_keywords) and is_long_enough):
                             job_description = msg_content
                             print(f"🔍 Found job description in conversation history ({msg_role} message): {len(job_description)} chars")
                             print(f"   Preview: {msg_content[:200]}...")
@@ -573,46 +587,82 @@ Example for Web Dev: ["Core Java", "OOP Concepts", "Collections", "Multithreadin
             print(f"🔍 Skill Gap Analysis:")
             print(f"   User skills ({len(user_skills)}): {user_skills}")
             print(f"   Job skills ({len(job_skills)}): {job_skills}")
+            print(f"   User skill embeddings available: {len(user_skill_embeddings) if user_skill_embeddings else 0}")
             
             # Initialize variables
             matched = []
             gap = []
+            use_vector_matching = False
             
-            try:
-                # Perform skill gap analysis
-                chain = get_skill_gap_chain()
-                gap_result = await chain.ainvoke({
-                    "user_skills": json.dumps(user_skills),
-                    "job_skills": json.dumps(job_skills)
-                })
-                
-                print(f"🔍 Gap analysis result: {gap_result}")
-                
-                if isinstance(gap_result, dict):
-                    matched = gap_result.get("matched", []) or []
-                    gap = gap_result.get("gap", []) or []
-                    # If gap is empty but we have job skills, something went wrong
-                    if not gap and job_skills:
-                        # Fallback: manually compute gap
+            # Try vector-based skill matching first (if embeddings are available)
+            if user_skill_embeddings and job_skills:
+                try:
+                    # Generate embeddings for job skills
+                    job_skill_embeddings = generate_skill_embeddings(job_skills)
+                    print(f"✅ Generated {len(job_skill_embeddings)} job skill embeddings")
+                    
+                    # Match skills using vector similarity
+                    match_result = match_skills_semantic(
+                        user_skills=user_skills,
+                        user_skill_embeddings=user_skill_embeddings,
+                        job_skills=job_skills,
+                        job_skill_embeddings=job_skill_embeddings,
+                        similarity_threshold=0.7
+                    )
+                    
+                    matched_pairs = match_result.get("matched", [])
+                    # matched_pairs is list of (user_skill, job_skill, similarity) tuples
+                    # Extract unique user skills that matched
+                    matched = list(set([pair[0] for pair in matched_pairs]))
+                    gap = match_result.get("missing", [])
+                    
+                    print(f"✅ Vector matching: {len(matched)} matched, {len(gap)} missing")
+                    print(f"   Matched pairs: {matched_pairs[:5]}...")  # Show first 5
+                    use_vector_matching = True
+                    
+                except Exception as e:
+                    print(f"⚠️ Error in vector skill matching: {e}")
+                    import traceback
+                    print(f"   Traceback: {traceback.format_exc()}")
+                    # Fall through to LLM analysis
+            
+            # Fall back to LLM analysis if vector matching wasn't used or failed
+            if not use_vector_matching:
+                try:
+                    # Perform skill gap analysis using LLM
+                    chain = get_skill_gap_chain()
+                    gap_result = await chain.ainvoke({
+                        "user_skills": json.dumps(user_skills),
+                        "job_skills": json.dumps(job_skills)
+                    })
+                    
+                    print(f"🔍 Gap analysis result: {gap_result}")
+                    
+                    if isinstance(gap_result, dict):
+                        matched = gap_result.get("matched", []) or []
+                        gap = gap_result.get("gap", []) or []
+                        # If gap is empty but we have job skills, something went wrong
+                        if not gap and job_skills:
+                            # Fallback: manually compute gap
+                            user_skills_lower = [s.lower() for s in user_skills]
+                            gap = [js for js in job_skills if js.lower() not in user_skills_lower and not any(us.lower() in js.lower() or js.lower() in us.lower() for us in user_skills)]
+                            print(f"⚠️ Gap was empty, computed manually: {gap}")
+                    else:
+                        # Fallback: manual computation
                         user_skills_lower = [s.lower() for s in user_skills]
+                        matched = [js for js in job_skills if js.lower() in user_skills_lower or any(us.lower() in js.lower() or js.lower() in us.lower() for us in user_skills)]
                         gap = [js for js in job_skills if js.lower() not in user_skills_lower and not any(us.lower() in js.lower() or js.lower() in us.lower() for us in user_skills)]
-                        print(f"⚠️ Gap was empty, computed manually: {gap}")
-                else:
+                        print(f"⚠️ Gap result was not dict, computed manually. Matched: {len(matched)}, Gap: {len(gap)}")
+                except Exception as e:
+                    import traceback
+                    error_trace = traceback.format_exc()
+                    print(f"⚠️ Error in skill gap chain: {e}")
+                    print(f"   Traceback: {error_trace}")
                     # Fallback: manual computation
                     user_skills_lower = [s.lower() for s in user_skills]
                     matched = [js for js in job_skills if js.lower() in user_skills_lower or any(us.lower() in js.lower() or js.lower() in us.lower() for us in user_skills)]
                     gap = [js for js in job_skills if js.lower() not in user_skills_lower and not any(us.lower() in js.lower() or js.lower() in us.lower() for us in user_skills)]
-                    print(f"⚠️ Gap result was not dict, computed manually. Matched: {len(matched)}, Gap: {len(gap)}")
-            except Exception as e:
-                import traceback
-                error_trace = traceback.format_exc()
-                print(f"⚠️ Error in skill gap chain: {e}")
-                print(f"   Traceback: {error_trace}")
-                # Fallback: manual computation
-                user_skills_lower = [s.lower() for s in user_skills]
-                matched = [js for js in job_skills if js.lower() in user_skills_lower or any(us.lower() in js.lower() or js.lower() in us.lower() for us in user_skills)]
-                gap = [js for js in job_skills if js.lower() not in user_skills_lower and not any(us.lower() in js.lower() or js.lower() in us.lower() for us in user_skills)]
-                print(f"⚠️ Using manual computation. Matched: {len(matched)}, Gap: {len(gap)}")
+                    print(f"⚠️ Using manual computation. Matched: {len(matched)}, Gap: {len(gap)}")
             
             # Determine title for response
             if job_description:
@@ -836,15 +886,37 @@ Focus on developing: {recommendation_str}"""
                 response_parts.append(f"🎯 **Domain Match:** {domain_info}")
                 response_parts.append("")
             
-            # Add insights
-            if fit_score >= 70:
-                insight = "Excellent match! You're well-qualified for this role."
-            elif fit_score >= 50:
-                insight = "Good potential match. Consider developing the missing skills to strengthen your application."
-            else:
-                insight = "Some gaps exist. Focus on building the required skills before applying."
+            # Extract actionable guidance from rationale
+            guidance_match = re.search(r'GUIDANCE[:\s]+([^.]+?)(?:\.|$)', rationale, re.IGNORECASE)
+            guidance_text = guidance_match.group(1).strip() if guidance_match else None
             
-            response_parts.append(f"💡 **Insights:**")
+            # Add insights with actionable guidance
+            if fit_score >= 70:
+                insight = "🎉 **Excellent Match!** You're well-qualified for this role."
+                if guidance_text:
+                    response_parts.append(f"💡 **Next Steps:**")
+                    response_parts.append(guidance_text)
+                else:
+                    response_parts.append(f"💡 **Insights:**")
+                    response_parts.append("You have strong alignment with this role. Highlight your matched skills in your application!")
+            elif fit_score >= 50:
+                insight = "✅ **Good Potential Match** - You have a solid foundation for this role."
+                if guidance_text:
+                    response_parts.append(f"💡 **Learning Path:**")
+                    response_parts.append(guidance_text)
+                else:
+                    response_parts.append(f"💡 **Insights:**")
+                    response_parts.append("Focus on developing the missing skills to strengthen your application. Consider taking online courses or building projects in those areas.")
+            else:
+                insight = "📚 **Learning Opportunity** - This role requires skills you can develop."
+                if guidance_text:
+                    response_parts.append(f"💡 **Career Guidance:**")
+                    response_parts.append(guidance_text)
+                else:
+                    response_parts.append(f"💡 **Insights:**")
+                    response_parts.append("Consider whether this role aligns with your career goals. If yes, create a learning plan to build the required skills over 3-6 months.")
+            
+            response_parts.append("")
             response_parts.append(insight)
             
             # If we couldn't parse skills, fallback to showing rationale
@@ -1549,6 +1621,82 @@ This goal already exists. Ask me *"What are my goals?"* to see all your goals.""
                     sources=None
                 )
         
+        elif intent == "profile_view":
+            # View user profile
+            if not req.user_id:
+                return ChatResponse(
+                    response="⚠️ I need your user_id to view your profile. Please provide your user_id or upload your resume first.",
+                    sources=None
+                )
+            
+            try:
+                res = sb.table("profiles").select("*").eq("user_id", req.user_id).execute()
+                if not res.data:
+                    return ChatResponse(
+                        response="⚠️ I don't have your profile yet. Please **upload your resume** using the '📄 Upload Resume' button above.",
+                        sources=None
+                    )
+                
+                profile = res.data[0]
+                name = profile.get("name", "Unknown")
+                email = profile.get("email", "Not provided")
+                experience = profile.get("experience_summary", "Not provided")
+                skills = profile.get("skills", []) or []
+                
+                response_text = f"📋 **Your Profile**\n\n"
+                response_text += f"👤 **Name:** {name}\n"
+                response_text += f"📧 **Email:** {email}\n\n"
+                response_text += f"💼 **Experience:**\n{experience}\n\n"
+                
+                if skills:
+                    response_text += f"🛠️ **Skills:**\n"
+                    response_text += ", ".join(skills)
+                else:
+                    response_text += f"🛠️ **Skills:** Not provided"
+                
+                return ChatResponse(response=response_text, sources=None)
+                
+            except Exception as e:
+                print(f"❌ Error retrieving profile: {e}")
+                return ChatResponse(
+                    response="⚠️ Error retrieving your profile. Please try again.",
+                    sources=None
+                )
+        
+        elif intent == "skills_list":
+            # List user skills
+            if not req.user_id:
+                return ChatResponse(
+                    response="⚠️ I need your user_id to list your skills. Please provide your user_id or upload your resume first.",
+                    sources=None
+                )
+            
+            try:
+                res = sb.table("profiles").select("*").eq("user_id", req.user_id).execute()
+                if not res.data:
+                    return ChatResponse(
+                        response="⚠️ I don't have your profile yet. Please **upload your resume** using the '📄 Upload Resume' button above.",
+                        sources=None
+                    )
+                
+                profile = res.data[0]
+                skills = profile.get("skills", []) or []
+                
+                if skills:
+                    response_text = f"🛠️ **Your Skills** ({len(skills)} total):\n\n"
+                    response_text += ", ".join(skills)
+                else:
+                    response_text = "⚠️ No skills found in your profile. Please **upload your resume** to add your skills."
+                
+                return ChatResponse(response=response_text, sources=None)
+                
+            except Exception as e:
+                print(f"❌ Error retrieving skills: {e}")
+                return ChatResponse(
+                    response="⚠️ Error retrieving your skills. Please try again.",
+                    sources=None
+                )
+        
         elif intent == "rag":
             # Use RAG for career knowledge
             rag_result = await query_career_knowledge(req.message, top_k=5)
@@ -1624,9 +1772,17 @@ This goal already exists. Ask me *"What are my goals?"* to see all your goals.""
                                         'job title:', 'venue:', 'date:', 'time:', 'experience range:', 'role:',
                                         'industry type:', 'department:', 'employment type:', 'role category:',
                                         'minimum qualification', 'education', 'key skills', 'preferred skills',
-                                        'must have', 'should have', 'good to have', 'technical and professional requirements'
+                                        'must have', 'should have', 'good to have', 'technical and professional requirements',
+                                        'about the role', 'about this position', 'position summary', 'role overview',
+                                        'company overview', 'location:', 'salary range', 'benefits package'
                                     ]
-                                    if any(keyword in msg_text for keyword in jd_keywords) and len(msg_content) > 150:
+                                    # More lenient: accept shorter messages if they have strong JD indicators
+                                    has_strong_jd_keywords = any(keyword in msg_text for keyword in [
+                                        'job description', 'job posting', 'we are looking', 'we are seeking',
+                                        'about the role', 'position summary', 'role overview', 'employment type'
+                                    ])
+                                    is_long_enough = len(msg_content) > 100  # Reduced from 150
+                                    if (has_strong_jd_keywords and len(msg_content) > 50) or (any(keyword in msg_text for keyword in jd_keywords) and is_long_enough):
                                         job_description = msg_content
                                         # Clean the job description text
                                         job_description = clean_job_description(job_description)

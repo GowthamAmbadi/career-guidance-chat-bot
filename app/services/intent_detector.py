@@ -277,7 +277,36 @@ def detect_intent(message: str, user_id: Optional[str] = None) -> Dict[str, Any]
                 }
             }
     
-    # 8. RAG Intent (general career questions)
+    # 8. Profile View Intent
+    # Patterns: "view my profile", "show my profile", "my profile", "what's in my profile"
+    profile_view_patterns = [
+        r'\b(?:view|show|see|display|get|tell me about)\s+(?:my|the)?\s+profile',
+        r'\b(?:my|the)\s+profile',
+        r'\b(?:what|which)\s+(?:is|are)\s+(?:in|on)\s+(?:my|the)?\s+profile',
+        r'\b(?:profile|resume|cv)\s+(?:details|information|info)',
+    ]
+    if any(re.search(pattern, message_lower) for pattern in profile_view_patterns):
+        return {
+            "intent": "profile_view",
+            "extracted_data": {"user_id": user_id}
+        }
+    
+    # 9. Skills List Intent
+    # Patterns: "what are my skills", "list my skills", "show my skills", "my skills"
+    skills_list_patterns = [
+        r'\b(?:what|which|list|show|tell me|display)\s+(?:are|is)\s+(?:my|the)?\s+skills?',
+        r'\b(?:my|the)\s+skills?',
+        r'\b(?:what|which)\s+skills?\s+(?:do I have|I have|I know|I can)',
+        r'\b(?:list|show|display)\s+(?:my|the)?\s+skills?',
+        r'\b(?:tell me|show me)\s+(?:about|my)?\s+skills?',
+    ]
+    if any(re.search(pattern, message_lower) for pattern in skills_list_patterns):
+        return {
+            "intent": "skills_list",
+            "extracted_data": {"user_id": user_id}
+        }
+    
+    # 10. RAG Intent (general career questions)
     # Default to RAG for career-related questions
     career_question_keywords = [
         'job outlook', 'salary', 'day to day', 'what is', 'tell me about',

@@ -2,7 +2,7 @@ import json
 import re
 import os
 from typing import Dict, Any
-from app.llm.gemini_client import get_gemini_llm, create_resume_parser_prompt
+from app.llm.llm_client import get_openai_llm, create_resume_parser_prompt
 
 # PDF/DOCX text extraction
 try:
@@ -30,7 +30,7 @@ async def parse_resume_text(resume_text: str) -> Dict[str, Any]:
     Returns structured data: name, email, experience, skills
     """
     # Use LLM to extract structured data from text
-    llm = get_gemini_llm(temperature=0.1)  # Low temperature for structured extraction
+    llm = get_openai_llm(temperature=0.1)  # Low temperature for structured extraction
     prompt = create_resume_parser_prompt()
     chain = prompt | llm
     

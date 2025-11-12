@@ -5,7 +5,8 @@ from typing import Optional
 from app.models.schemas import ResumeParsed
 from app.services.resume_parser import parse_resume_text, parse_resume_file
 from app.clients.supabase_client import get_supabase_client
-from app.services.vector_matcher import generate_profile_embedding
+from app.services.vector_matcher import generate_profile_embedding, generate_skill_embeddings
+from app.utils.profile_utils import format_skill_embeddings_for_postgres
 
 
 router = APIRouter(prefix="/resume", tags=["resume"])
@@ -73,17 +74,43 @@ async def parse_resume(
                                 print(f"⚠️ Error generating profile embedding: {e}")
                                 # Continue without embedding - profile will be saved without it
                             
+                            # Generate skill embeddings
+                            skills_embeddings = None
+                            skills_list = parsed.get("skills", [])
+                            if skills_list:
+                                try:
+                                    skills_embeddings = generate_skill_embeddings(skills_list)
+                                    # Format embeddings for PostgreSQL vector array
+                                    skills_embeddings = format_skill_embeddings_for_postgres(skills_embeddings)
+                                    print(f"✅ Generated {len(skills_embeddings) if skills_embeddings else 0} skill embeddings")
+                                except Exception as e:
+                                    print(f"⚠️ Error generating skill embeddings: {e}")
+                                    # Continue without skill embeddings - profile will be saved without them
+                            
                             profile_data = {
                                 "user_id": user_id,
                                 "name": parsed.get("name", ""),
                                 "email": parsed.get("email", "unknown@example.com"),
                                 "experience_summary": parsed.get("experience", ""),
                                 "skills": parsed.get("skills", []),
-                                "profile_embedding": profile_embedding
+                                "profile_embedding": profile_embedding,
                             }
                             print(f"   Profile data: {profile_data}")
                             result = sb.table("profiles").upsert(profile_data).execute()
                             print(f"✅ Profile saved successfully for user_id: {user_id}")
+                            
+                            # Update skills_embeddings via RPC if we have them (vector arrays need special handling)
+                            if skills_embeddings:
+                                try:
+                                    # Pass Python list directly - Supabase converts to JSONB automatically
+                                    sb.rpc('update_skills_embeddings', {
+                                        'p_user_id': user_id,
+                                        'p_skills_embeddings': skills_embeddings  # Pass list directly, not json.dumps()
+                                    }).execute()
+                                    print(f"✅ Updated skills_embeddings via RPC for user_id: {user_id}")
+                                except Exception as e:
+                                    print(f"⚠️ Error updating skills_embeddings via RPC: {e}")
+                                    # Continue - profile is saved, just without skill embeddings
                             print(f"   Result: {result.data if result.data else 'No data returned'}")
                             # Verify it was saved
                             verify = sb.table("profiles").select("*").eq("user_id", user_id).execute()
@@ -192,17 +219,43 @@ async def parse_resume(
                 print(f"⚠️ Error generating profile embedding: {e}")
                 # Continue without embedding - profile will be saved without it
             
+            # Generate skill embeddings
+            skills_embeddings = None
+            skills_list = parsed.get("skills", [])
+            if skills_list:
+                try:
+                                    skills_embeddings = generate_skill_embeddings(skills_list)
+                                    # Format embeddings for PostgreSQL vector array
+                                    skills_embeddings = format_skill_embeddings_for_postgres(skills_embeddings)
+                                    print(f"✅ Generated {len(skills_embeddings) if skills_embeddings else 0} skill embeddings")
+                except Exception as e:
+                    print(f"⚠️ Error generating skill embeddings: {e}")
+                    # Continue without skill embeddings - profile will be saved without them
+            
             profile_data = {
                 "user_id": user_id,
                 "name": parsed.get("name", ""),
                 "email": parsed.get("email", "unknown@example.com"),
                 "experience_summary": parsed.get("experience", ""),
                 "skills": parsed.get("skills", []),
-                "profile_embedding": profile_embedding
+                "profile_embedding": profile_embedding,
             }
             print(f"   Profile data: {profile_data}")
             result = sb.table("profiles").upsert(profile_data).execute()
             print(f"✅ Profile saved successfully for user_id: {user_id}")
+            
+            # Update skills_embeddings via RPC if we have them (vector arrays need special handling)
+            if skills_embeddings:
+                try:
+                    # Pass Python list directly - Supabase converts to JSONB automatically
+                    sb.rpc('update_skills_embeddings', {
+                        'p_user_id': user_id,
+                        'p_skills_embeddings': skills_embeddings  # Pass list directly, not json.dumps()
+                    }).execute()
+                    print(f"✅ Updated skills_embeddings via RPC for user_id: {user_id}")
+                except Exception as e:
+                    print(f"⚠️ Error updating skills_embeddings via RPC: {e}")
+                    # Continue - profile is saved, just without skill embeddings
             print(f"   Result: {result.data if result.data else 'No data returned'}")
             # Verify it was saved
             verify = sb.table("profiles").select("*").eq("user_id", user_id).execute()

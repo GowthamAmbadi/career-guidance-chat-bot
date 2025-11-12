@@ -54,15 +54,14 @@ This project will be built using a modern, AI-native stack.
   * **SQL Tables:** Stores structured user data (profiles, goals).  
   * **Vector Store (pgvector):** Stores embeddings for all our RAG knowledge (career\_data).  
 * **AI Models:**  
-  * **LLM (Generation):** **Gemini** (via API). Used by LangChain for final response generation.  
-  * **Embedding Model:** A sentence-transformers model (e.g., all-MiniLM-L6-v2). Used to generate embeddings for RAG and semantic similarity tasks.  
+  * **LLM (Generation):** **OpenAI GPT** (via API). Used by LangChain for final response generation.  
+  * **Embedding Model:** OpenAI Embeddings API (text-embedding-3-small). Used to generate embeddings for RAG and semantic similarity tasks.  
 * **Core Python Libraries:**  
-  * langchain, langchain-community, langchain-openai (or equivalent for Gemini)  
+  * langchain, langchain-community, langchain-openai  
   * fastapi, uvicorn  
   * supabase-client  
-  * pyresparser: The *key tool* for the Resume Parsing feature.  
-  * sentence-transformers: For all embedding and similarity calculations.  
-  * spacy, nltk: As dependencies for pyresparser.
+  * pdfplumber, PyPDF2, python-docx: For resume parsing from PDF/DOCX files.  
+  * openai: For embeddings (text-embedding-3-small) and LLM generation (gpt-4o-mini).
 
 ## **4\. Supabase Database Schema**
 

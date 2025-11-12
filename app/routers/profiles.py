@@ -1,7 +1,8 @@
 from fastapi import APIRouter
 from app.clients.supabase_client import get_supabase_client
 from app.models.schemas import Profile, ResumeParsed
-from app.services.vector_matcher import generate_profile_embedding
+from app.services.vector_matcher import generate_profile_embedding, generate_skill_embeddings
+from app.utils.profile_utils import format_skill_embeddings_for_postgres
 
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
@@ -45,6 +46,27 @@ def upsert_profile(user_id: str, parsed: ResumeParsed):
         if existing_profile.data and existing_profile.data[0].get("profile_embedding"):
             profile_embedding = existing_profile.data[0].get("profile_embedding")
     
+    # Generate skill embeddings if needed
+    skills_embeddings = None
+    if needs_embedding_regeneration:
+        skills_list = parsed.skills or []
+        if skills_list:
+            try:
+                skills_embeddings = generate_skill_embeddings(skills_list)
+                # Format embeddings for PostgreSQL vector array
+                skills_embeddings = format_skill_embeddings_for_postgres(skills_embeddings)
+                print(f"✅ Generated {len(skills_embeddings) if skills_embeddings else 0} skill embeddings for user_id: {user_id}")
+            except Exception as e:
+                print(f"⚠️ Error generating skill embeddings: {e}")
+                # Continue without skill embeddings - profile will be saved without them
+                # If existing profile has skill embeddings, we'll keep them
+                if existing_profile.data and existing_profile.data[0].get("skills_embeddings"):
+                    skills_embeddings = existing_profile.data[0].get("skills_embeddings")
+    else:
+        # Keep existing skill embeddings if data hasn't changed
+        if existing_profile.data and existing_profile.data[0].get("skills_embeddings"):
+            skills_embeddings = existing_profile.data[0].get("skills_embeddings")
+    
     # Prepare profile data
     profile_data = {
         "user_id": user_id,
@@ -63,6 +85,19 @@ def upsert_profile(user_id: str, parsed: ResumeParsed):
         .upsert(profile_data)
         .execute()
     )
+    
+    # Update skills_embeddings via RPC if we have them (vector arrays need special handling)
+    if skills_embeddings is not None:
+        try:
+            # Pass Python list directly - Supabase converts to JSONB automatically
+            sb.rpc('update_skills_embeddings', {
+                'p_user_id': user_id,
+                'p_skills_embeddings': skills_embeddings  # Pass list directly, not json.dumps()
+            }).execute()
+            print(f"✅ Updated skills_embeddings via RPC for user_id: {user_id}")
+        except Exception as e:
+            print(f"⚠️ Error updating skills_embeddings via RPC: {e}")
+            # Continue - profile is saved, just without skill embeddings
     data = res.data[0]
     return Profile(
         user_id=data["user_id"],
