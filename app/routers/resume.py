@@ -261,10 +261,10 @@ async def parse_resume(
             skills_list = parsed.get("skills", [])
             if skills_list:
                 try:
-                                    skills_embeddings = generate_skill_embeddings(skills_list)
-                                    # Format embeddings for PostgreSQL vector array
-                                    skills_embeddings = format_skill_embeddings_for_postgres(skills_embeddings)
-                                    print(f"✅ Generated {len(skills_embeddings) if skills_embeddings else 0} skill embeddings")
+                    skills_embeddings = generate_skill_embeddings(skills_list)
+                    # Format embeddings for PostgreSQL vector array
+                    skills_embeddings = format_skill_embeddings_for_postgres(skills_embeddings)
+                    print(f"✅ Generated {len(skills_embeddings) if skills_embeddings else 0} skill embeddings")
                 except Exception as e:
                     print(f"⚠️ Error generating skill embeddings: {e}")
                     # Continue without skill embeddings - profile will be saved without them

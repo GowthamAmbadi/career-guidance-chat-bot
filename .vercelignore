@@ -12,8 +12,8 @@ database/
 
 # Scripts
 scripts/
-*.sh
-build.sh
+# *.sh  # Commented out - build.sh is needed for Vercel deployment
+# build.sh  # Commented out - needed for Vercel deployment
 optimize_bundle.sh
 
 # Static assets - needed for FastAPI to serve frontend
