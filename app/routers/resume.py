@@ -1,5 +1,8 @@
 import os
+import base64
 import tempfile
+import time
+import random
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from typing import Optional
 from app.models.schemas import ResumeParsed
@@ -55,7 +58,24 @@ async def parse_resume(
                     if os.path.exists(temp_path):
                         os.unlink(temp_path)
                     
-                    # Save to profile if user_id is provided
+                    # CRITICAL: Generate user_id from email to ensure consistency
+                    # This overrides any user_id sent from frontend to prevent mismatches
+                    parsed_email = parsed.get("email", "")
+                    if parsed_email and parsed_email != "unknown@example.com":
+                        # Generate user_id from email (same logic as frontend)
+                        email_encoded = base64.b64encode(parsed_email.encode()).decode()
+                        email_based_user_id = 'user_' + ''.join(c for c in email_encoded if c.isalnum())[:20]
+                        old_user_id = user_id
+                        user_id = email_based_user_id
+                        print(f"🔄 Generated user_id from email: {user_id} for email: {parsed_email}")
+                        if old_user_id and old_user_id != user_id:
+                            print(f"   ⚠️ Overriding frontend user_id: {old_user_id} -> {user_id}")
+                    elif not user_id:
+                        # Fallback: generate temporary user_id if no email and no user_id provided
+                        user_id = f'user_{int(time.time())}_{random.randint(1000, 9999)}'
+                        print(f"⚠️ No email found, using temporary user_id: {user_id}")
+                    
+                    # Save to profile if user_id is available
                     if user_id:
                         try:
                             print(f"🔍 Attempting to save profile for user_id: {user_id}")
@@ -200,7 +220,24 @@ async def parse_resume(
             detail=f"Error parsing resume: {str(e)}"
         )
     
-    # Save to profile if user_id is provided
+    # CRITICAL: Generate user_id from email to ensure consistency
+    # This overrides any user_id sent from frontend to prevent mismatches
+    parsed_email = parsed.get("email", "")
+    if parsed_email and parsed_email != "unknown@example.com":
+        # Generate user_id from email (same logic as frontend)
+        email_encoded = base64.b64encode(parsed_email.encode()).decode()
+        email_based_user_id = 'user_' + ''.join(c for c in email_encoded if c.isalnum())[:20]
+        old_user_id = user_id
+        user_id = email_based_user_id
+        print(f"🔄 Generated user_id from email: {user_id} for email: {parsed_email}")
+        if old_user_id and old_user_id != user_id:
+            print(f"   ⚠️ Overriding frontend user_id: {old_user_id} -> {user_id}")
+    elif not user_id:
+        # Fallback: generate temporary user_id if no email and no user_id provided
+        user_id = f'user_{int(time.time())}_{random.randint(1000, 9999)}'
+        print(f"⚠️ No email found, using temporary user_id: {user_id}")
+    
+    # Save to profile if user_id is available
     if user_id:
         try:
             print(f"🔍 Attempting to save profile for user_id: {user_id}")

@@ -446,64 +446,9 @@
         </div>
         
         <div class="chat-messages" id="chatMessages">
-            <div class="message assistant">
-                <div class="message-content welcome-content">
-                    <div class="welcome-header">
-                        👋 Hello! I'm <strong>Career Guidance</strong>
-                        <br>
-                        <strong>🎯 All Features Available in Chat:</strong>
-                    </div>
-                    <div class="welcome-message">
-                        <div class="feature-card">
-                            <strong>1. Resume Parsing</strong>
-                            <div class="feature-items">
-                                • Click "📄 Upload Resume" button above, OR<br>
-                                • Just paste your resume text and I'll parse it!
-                            </div>
-                        </div>
-                        
-                        <div class="feature-card">
-                            <strong>2. Career Recommendations</strong>
-                            <div class="feature-items">
-                                <button class="suggestion-btn" onclick="handleSuggestionClick('What careers are good for me?')">Ask: "What careers are good for me?"</button><br>
-                                <button class="suggestion-btn" onclick="handleSuggestionClick('Recommend careers based on my skills')">Ask: "Recommend careers based on my skills"</button>
-                            </div>
-                        </div>
-                        
-                        <div class="feature-card">
-                            <strong>3. Skill Gap Analysis</strong>
-                            <div class="feature-items">
-                                <button class="suggestion-btn" onclick="handleSuggestionClick('What skills do I need for Data Scientist?')">Ask: "What skills do I need for Data Scientist?"</button><br>
-                                <button class="suggestion-btn" onclick="handleSuggestionClick('Analyze my skills for Software Engineer')">Ask: "Analyze my skills for Software Engineer"</button>
-                            </div>
-                        </div>
-                        
-                        <div class="feature-card">
-                            <strong>4. Job Fit Assessment</strong>
-                            <div class="feature-items">
-                                • Paste a job description and I'll analyze your fit!<br>
-                                <button class="suggestion-btn" onclick="handleSuggestionClick('How well do I fit this job?')">Ask: "How well do I fit this job?"</button>
-                            </div>
-                        </div>
-                        
-                        <div class="feature-card">
-                            <strong>5. Goal Setting & Tracking</strong>
-                            <div class="feature-items">
-                                <button class="suggestion-btn" onclick="handleSuggestionClick('Set a goal to learn Python')">Say: "Set a goal to learn Python"</button><br>
-                                <button class="suggestion-btn" onclick="handleSuggestionClick('What are my goals?')">Say: "What are my goals?"</button>
-                            </div>
-                        </div>
-                        
-                        <div class="feature-card">
-                            <strong>6. Career Knowledge (RAG)</strong>
-                            <div class="feature-items">
-                                <button class="suggestion-btn" onclick="handleSuggestionClick('What is the job outlook for Data Scientists?')">Ask: "What is the job outlook for Data Scientists?"</button><br>
-                                <button class="suggestion-btn" onclick="handleSuggestionClick('Tell me about Software Engineering career')">Ask: "Tell me about Software Engineering career"</button>
-                            </div>
-                        </div>
-                    </div>
-                    <br>
-                    <strong>💡 Try it:</strong> Start by uploading your resume, then ask me anything!
+            <div class="message assistant" id="welcomeMessage">
+                <div class="message-content welcome-content" id="welcomeContent">
+                    <!-- Welcome message will be dynamically updated based on resume upload status -->
                 </div>
             </div>
         </div>
@@ -545,6 +490,115 @@
         
         let conversationHistory = [];
         let currentUserId = null; // Will be set after resume parsing
+        let resumeUploaded = false; // Track if resume has been uploaded
+        
+        // Check if user already has a profile (returning user)
+        function checkExistingProfile() {
+            const hasEmail = localStorage.getItem('careerguidance_user_email');
+            const hasUserId = localStorage.getItem('careerguidance_user_id');
+            if (hasEmail && hasEmail !== 'unknown@example.com' && hasUserId) {
+                // User likely has a profile, show all features
+                resumeUploaded = true;
+                return true;
+            }
+            return false;
+        }
+        
+        // Show welcome message based on resume upload status
+        function showWelcomeMessage() {
+            const welcomeContent = document.getElementById('welcomeContent');
+            if (!welcomeContent) return;
+            
+            if (!resumeUploaded) {
+                // Show only resume upload message
+                welcomeContent.innerHTML = `
+                    <div class="welcome-header">
+                        👋 Hello! I'm <strong>Career Guidance</strong>
+                        <br><br>
+                        <strong>📄 To get started, please upload your resume first!</strong>
+                    </div>
+                    <div style="margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 12px; border: 2px dashed #000000;">
+                        <p style="margin-bottom: 15px; font-size: 16px; color: #333;">
+                            <strong>Why upload your resume?</strong>
+                        </p>
+                        <p style="font-size: 14px; line-height: 1.8; color: #666;">
+                            Your resume helps me understand your skills, experience, and background. 
+                            Once uploaded, I can provide you with:
+                        </p>
+                        <ul style="margin-top: 15px; padding-left: 20px; font-size: 14px; line-height: 2; color: #666;">
+                            <li>🎯 Personalized career recommendations</li>
+                            <li>📊 Skill gap analysis for specific roles</li>
+                            <li>💼 Job fit assessment</li>
+                            <li>🎓 Goal setting and tracking</li>
+                            <li>📚 Career insights and knowledge</li>
+                        </ul>
+                        <p style="margin-top: 20px; font-size: 14px; color: #000; font-weight: 600;">
+                            👆 Click the "📄 Upload Resume" button above to get started!
+                        </p>
+                    </div>
+                `;
+            } else {
+                // Show all features (after resume upload)
+                welcomeContent.innerHTML = `
+                    <div class="welcome-header">
+                        👋 Hello! I'm <strong>Career Guidance</strong>
+                        <br>
+                        <strong>🎯 All Features Available:</strong>
+                    </div>
+                    <div class="welcome-message">
+                        <div class="feature-card">
+                            <strong>Career Recommendations</strong>
+                            <div class="feature-items">
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('What careers are good for me?')">Ask: "What careers are good for me?"</button><br>
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('Recommend careers based on my skills')">Ask: "Recommend careers based on my skills"</button>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <strong>Skill Gap Analysis</strong>
+                            <div class="feature-items">
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('What skills do I need for Data Scientist?')">Ask: "What skills do I need for Data Scientist?"</button><br>
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('Analyze my skills for Software Engineer')">Ask: "Analyze my skills for Software Engineer"</button>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <strong>Job Fit Assessment</strong>
+                            <div class="feature-items">
+                                • Paste a job description and I'll analyze your fit!<br>
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('How well do I fit this job?')">Ask: "How well do I fit this job?"</button>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <strong>Goal Setting & Tracking</strong>
+                            <div class="feature-items">
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('Set a goal to learn Python')">Say: "Set a goal to learn Python"</button><br>
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('What are my goals?')">Say: "What are my goals?"</button>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <strong>Career Knowledge (RAG)</strong>
+                            <div class="feature-items">
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('What is the job outlook for Data Scientists?')">Ask: "What is the job outlook for Data Scientists?"</button><br>
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('Tell me about Software Engineering career')">Ask: "Tell me about Software Engineering career"</button>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <strong>Profile & Skills</strong>
+                            <div class="feature-items">
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('What are my skills?')">Ask: "What are my skills?"</button><br>
+                                <button class="suggestion-btn" onclick="handleSuggestionClick('View my profile')">Ask: "View my profile"</button>
+                            </div>
+                        </div>
+                    </div>
+                    <br>
+                    <strong>💡 Try it:</strong> Ask me anything about your career!
+                `;
+            }
+        }
         
         // Handle suggestion button clicks
         function handleSuggestionClick(suggestionText) {
@@ -589,7 +643,23 @@
             return userId;
         }
         
+        // Generate user_id from email (used after resume upload)
+        function generateUserIdFromEmail(email) {
+            if (!email || email === 'unknown@example.com') {
+                return null;
+            }
+            return 'user_' + btoa(email).replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
+        }
+        
         currentUserId = getOrCreateUserId();
+        console.log('🔍 Initial currentUserId:', currentUserId);
+        
+        // Initialize: Check if user has existing profile
+        if (checkExistingProfile()) {
+            console.log('✅ Returning user detected, showing all features');
+        } else {
+            console.log('📄 New user, showing resume upload prompt');
+        }
         
         // Convert markdown to HTML
         function markdownToHtml(text) {
@@ -707,9 +777,21 @@
             showTyping();
             
             try {
+                // Ensure we're using the most recent user_id from localStorage
+                // This handles cases where user_id might have been updated after resume upload
+                const storedEmail = localStorage.getItem('careerguidance_user_email');
+                if (storedEmail && storedEmail !== 'unknown@example.com') {
+                    const emailBasedUserId = generateUserIdFromEmail(storedEmail);
+                    if (emailBasedUserId && currentUserId !== emailBasedUserId) {
+                        console.log('🔄 Syncing user_id before chat request:', currentUserId, '->', emailBasedUserId);
+                        currentUserId = emailBasedUserId;
+                    }
+                }
+                
                 // Log user_id before sending request
                 console.log('📤 Sending chat request with user_id:', currentUserId);
                 console.log('📧 Email stored:', localStorage.getItem('careerguidance_user_email'));
+                console.log('📧 Expected user_id from email:', storedEmail ? generateUserIdFromEmail(storedEmail) : 'N/A');
                 
                 const response = await fetch('/chat/', {
                     method: 'POST',
@@ -852,21 +934,32 @@
                 
                 const data = await response.json();
                 
-                // CRITICAL: Generate a new user_id based on email if available
-                // This ensures each user (identified by email) gets their own user_id
+                // CRITICAL: ALWAYS update user_id based on email from parsed resume
+                // This ensures we're using the correct user_id for the uploaded resume
                 if (data.email && data.email !== 'unknown@example.com') {
-                    // Generate user_id based on email to ensure uniqueness per user
-                    // This prevents different users from sharing the same user_id
-                    const emailBasedUserId = 'user_' + btoa(data.email).replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
-                    if (currentUserId !== emailBasedUserId) {
-                        console.log('🔄 Updating user_id from email:', currentUserId, '->', emailBasedUserId);
-                        currentUserId = emailBasedUserId;
-                        // Store both user_id and email for future use
-                        localStorage.setItem('careerguidance_user_id', emailBasedUserId);
-                        localStorage.setItem('careerguidance_user_email', data.email);
-                        console.log('✅ Stored email-based user_id:', emailBasedUserId, 'for email:', data.email);
+                    const emailBasedUserId = generateUserIdFromEmail(data.email);
+                    const oldUserId = currentUserId;
+                    
+                    // ALWAYS update, even if it's the same (to ensure consistency)
+                    currentUserId = emailBasedUserId;
+                    localStorage.setItem('careerguidance_user_id', emailBasedUserId);
+                    localStorage.setItem('careerguidance_user_email', data.email);
+                    
+                    if (oldUserId !== emailBasedUserId) {
+                        console.log('🔄 Updated user_id from email:', oldUserId, '->', emailBasedUserId);
+                        console.log('   Old email:', localStorage.getItem('careerguidance_user_email'));
+                        console.log('   New email:', data.email);
+                    } else {
+                        console.log('✅ Confirmed user_id matches email:', emailBasedUserId, 'for email:', data.email);
                     }
+                    console.log('✅ Stored email-based user_id:', emailBasedUserId, 'for email:', data.email);
+                } else {
+                    console.warn('⚠️ No valid email in parsed resume, keeping current user_id:', currentUserId);
                 }
+                
+                // Mark resume as uploaded
+                resumeUploaded = true;
+                localStorage.setItem('careerguidance_resume_uploaded', 'true');
                 
                 // Log user_id for debugging
                 console.log('📄 Resume uploaded for user_id:', currentUserId);
@@ -883,23 +976,76 @@
                 parsedInfo += `📧 Email: ${data.email || 'Not found'}<br>`;
                 parsedInfo += `💼 Experience: ${data.experience ? (data.experience.substring(0, 100) + '...') : 'Not found'}<br>`;
                 parsedInfo += `🛠️ Skills: ${data.skills && data.skills.length > 0 ? data.skills.join(', ') : 'Not found'}<br><br>`;
-                parsedInfo += `💡 Tip: Ask me about career recommendations based on your profile!`;
+                parsedInfo += `💡 Great! Now I can help you with career guidance!`;
                 
                 parsedDiv.innerHTML = `<div class="message-content">${parsedInfo}</div>`;
                 chatMessages.appendChild(parsedDiv);
                 chatMessages.scrollTop = chatMessages.scrollHeight;
                 
-                // Add assistant message suggesting next steps with clickable buttons
+                // Show all features in a new message after resume parsed
                 setTimeout(() => {
-                    addMessage('assistant', 
-                        'Great! I\'ve parsed your resume and saved your profile. Now you can:\n\n' +
-                        '✅ Ask: "What careers are good for me?" - Get personalized recommendations\n' +
-                        '✅ Ask: "What skills do I need for Data Scientist?" - Skill gap analysis\n' +
-                        '✅ Paste a job description - Get job fit score\n' +
-                        '✅ Say: "Set a goal to learn Python" - Track your goals\n' +
-                        '✅ Ask: "Tell me about Data Science career" - Get insights\n\n' +
-                        '💬 Just type naturally - I understand what you need!'
-                    );
+                    const featuresDiv = document.createElement('div');
+                    featuresDiv.className = 'message assistant';
+                    featuresDiv.innerHTML = `
+                        <div class="message-content welcome-content">
+                            <div class="welcome-header">
+                                <strong>🎯 All Features Available:</strong>
+                            </div>
+                            <div class="welcome-message">
+                                <div class="feature-card">
+                                    <strong>Career Recommendations</strong>
+                                    <div class="feature-items">
+                                        <button class="suggestion-btn" onclick="handleSuggestionClick('What careers are good for me?')">Ask: "What careers are good for me?"</button><br>
+                                        <button class="suggestion-btn" onclick="handleSuggestionClick('Recommend careers based on my skills')">Ask: "Recommend careers based on my skills"</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="feature-card">
+                                    <strong>Skill Gap Analysis</strong>
+                                    <div class="feature-items">
+                                        <button class="suggestion-btn" onclick="handleSuggestionClick('What skills do I need for Data Scientist?')">Ask: "What skills do I need for Data Scientist?"</button><br>
+                                        <button class="suggestion-btn" onclick="handleSuggestionClick('Analyze my skills for Software Engineer')">Ask: "Analyze my skills for Software Engineer"</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="feature-card">
+                                    <strong>Job Fit Assessment</strong>
+                                    <div class="feature-items">
+                                        • Paste a job description and I'll analyze your fit!<br>
+                                        <button class="suggestion-btn" onclick="handleSuggestionClick('How well do I fit this job?')">Ask: "How well do I fit this job?"</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="feature-card">
+                                    <strong>Goal Setting & Tracking</strong>
+                                    <div class="feature-items">
+                                        <button class="suggestion-btn" onclick="handleSuggestionClick('Set a goal to learn Python')">Say: "Set a goal to learn Python"</button><br>
+                                        <button class="suggestion-btn" onclick="handleSuggestionClick('What are my goals?')">Say: "What are my goals?"</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="feature-card">
+                                    <strong>Career Knowledge (RAG)</strong>
+                                    <div class="feature-items">
+                                        <button class="suggestion-btn" onclick="handleSuggestionClick('What is the job outlook for Data Scientists?')">Ask: "What is the job outlook for Data Scientists?"</button><br>
+                                        <button class="suggestion-btn" onclick="handleSuggestionClick('Tell me about Software Engineering career')">Ask: "Tell me about Software Engineering career"</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="feature-card">
+                                    <strong>Profile & Skills</strong>
+                                    <div class="feature-items">
+                                        <button class="suggestion-btn" onclick="handleSuggestionClick('What are my skills?')">Ask: "What are my skills?"</button><br>
+                                        <button class="suggestion-btn" onclick="handleSuggestionClick('View my profile')">Ask: "View my profile"</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <br>
+                            <strong>💡 Try it:</strong> Ask me anything about your career!
+                        </div>
+                    `;
+                    chatMessages.appendChild(featuresDiv);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
                 }, 1000);
                 
             } catch (error) {
@@ -910,6 +1056,14 @@
             // Reset file input
             resumeFileInput.value = '';
         });
+        
+        // Check on page load if resume was previously uploaded
+        if (localStorage.getItem('careerguidance_resume_uploaded') === 'true') {
+            resumeUploaded = true;
+        }
+        
+        // Show appropriate welcome message on page load
+        showWelcomeMessage();
         
         // Auto-focus input
         messageInput.focus();
