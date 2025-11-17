@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = Field(None, alias="GEMINI_API_KEY")  # Deprecated, kept for backward compatibility
     openai_api_key: str = Field(..., alias="OPENAI_API_KEY")
 
-    cors_origins: str | None = Field("*", alias="CORS_ORIGINS")
+    cors_origins: str | None = Field("https://dev.my.skillcapital.ai,http://localhost:3000,http://localhost:3001", alias="CORS_ORIGINS")
     log_level: str | None = Field("info", alias="LOG_LEVEL")
 
     class Config:

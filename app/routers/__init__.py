@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from .root import router as root_router
 from .profiles import router as profiles_router
 from .goals import router as goals_router

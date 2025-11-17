@@ -46,7 +46,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 SUPABASE_JWT_SECRET=your_jwt_secret
 DATABASE_URL=your_database_url  # Optional, for direct DB access
 OPENAI_API_KEY=your_openai_api_key
-CORS_ORIGINS=http://localhost:3000
+CORS_ORIGINS=https://dev.my.skillcapital.ai,http://localhost:3000
 LOG_LEVEL=info
 ```
 
