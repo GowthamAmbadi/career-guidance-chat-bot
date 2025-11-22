@@ -58,5 +58,6 @@ source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+```
+<img width="1919" height="977" alt="image" src="https://github.com/user-attachments/assets/00d8d5aa-1ce5-4c40-91be-91e908dd62d0" />
 
-<img width="1919" height="977" alt="image" src="https://github.com/user-attachments/assets/239de26f-c683-4dd3-bcc6-da6f4c57df81" />
